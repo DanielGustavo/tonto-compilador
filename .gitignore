@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+
+# ply-generated parser tables
+parser.out
+parsetab.py
+
+.ruff_cache/
