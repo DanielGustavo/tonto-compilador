@@ -1,9 +1,11 @@
+import re
+
 from ply import lex
 
-from token_definitions import token_definitions
+from token_definitions import TokenEnum, token_definitions
 
 reserved = {}
-tokens = []
+tokens = [TokenEnum.INVALID_IDENTIFIER]
 
 for token, rule in token_definitions.items():
   if type(rule) is dict:
@@ -12,15 +14,26 @@ for token, rule in token_definitions.items():
   else:
     tokens.append(token)
 
-t_CLASS = token_definitions["CLASS"]
+
+def t_ID(t):
+  r"[a-zA-Z0-9_]+"
+  reserved_word = reserved.get(t.value)
+
+  if reserved_word is not None:
+    t.type = reserved_word
+  elif re.match(token_definitions[TokenEnum.CLASS], t.value):
+    t.type = TokenEnum.CLASS
+  elif re.match(token_definitions[TokenEnum.RELATION], t.value):
+    t.type = TokenEnum.RELATION
+  elif re.match(token_definitions[TokenEnum.INSTANCE], t.value):
+    t.type = TokenEnum.INSTANCE
+  else:
+    t.type = TokenEnum.INVALID_IDENTIFIER
+
+  return t
+
 
 t_ignore = " \t"
-
-
-@lex.TOKEN(r"" + "|".join(key for key in reserved.keys()))
-def t_RESERVED(t):
-  t.type = reserved.get(t.value)
-  return t
 
 
 def t_newline(t):
@@ -29,12 +42,23 @@ def t_newline(t):
 
 
 def t_error(t):
-  print("Invalid symbol '%s'" % t.value[0])
-  t.lexer.skip(1)
+  source = t.lexer.lexdata
+  bad = source[t.lexpos]
+
+  if len(bad) == 1:
+    message = f"unexpected character {bad!r}"
+  else:
+    message = f"unexpected characters {bad!r}"
+
+  print(message)
+  t.lexer.skip(len(bad))
 
 
 lexer = lex.lex()
-lexer.input("kind Cobertura_Da_Pizza")
+lexer.input("""
+kind Cobertura_Da_Pizza#$
+kind Cobertura_Da_BOLO!
+""")
 
 for token in lexer:
   print(token)
