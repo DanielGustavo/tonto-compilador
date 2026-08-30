@@ -5,7 +5,7 @@ from ply import lex
 from token_definitions import TokenEnum, token_definitions
 
 reserved = {}
-tokens = [TokenEnum.INVALID_IDENTIFIER]
+tokens = []
 
 for token, rule in token_definitions.items():
   if type(rule) is dict:
@@ -28,7 +28,8 @@ def t_ID(t):
   elif re.match(token_definitions[TokenEnum.INSTANCE], t.value):
     t.type = TokenEnum.INSTANCE
   else:
-    t.type = TokenEnum.INVALID_IDENTIFIER
+    # add diagnostic method
+    return None
 
   return t
 
@@ -56,8 +57,7 @@ def t_error(t):
 
 lexer = lex.lex()
 lexer.input("""
-kind Cobertura_Da_Pizza#$
-kind Cobertura_Da_BOLO!
+kind Cobertura_Da_Pizza8_
 """)
 
 for token in lexer:

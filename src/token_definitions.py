@@ -6,7 +6,6 @@ class TokenEnum:
   CLASS = "CLASS"
   RELATION = "RELATION"
   INSTANCE = "INSTANCE"
-  INVALID_IDENTIFIER = "INVALID_IDENTIFIER"
 
 
 reserved_words = {
