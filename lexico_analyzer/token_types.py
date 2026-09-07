@@ -1,3 +1,10 @@
+"""Tipos básicos do analisador léxico.
+
+`TokenEnum` é a categoria (classificação) de um token, usada tanto pelo PLY
+quanto pelas tabelas de saída. `CustomToken` é o token que devolvemos no lugar
+do token cru do PLY, carregando lexema, categoria, linha e coluna.
+"""
+
 from enum import Enum
 
 

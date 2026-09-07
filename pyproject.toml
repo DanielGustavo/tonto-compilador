@@ -1,1 +1,6 @@
-package-dir = {"" = "src"}
+[project]
+name = "tonto-compilador"
+version = "0.1.0"
+description = "Analisador léxico para a Textual Ontology Language (TONTO)"
+requires-python = ">=3.12"
+dependencies = ["ply==3.11"]

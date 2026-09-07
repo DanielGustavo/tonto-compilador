@@ -7,3 +7,6 @@ parser.out
 parsetab.py
 
 .ruff_cache/
+
+.venv/
+venv/

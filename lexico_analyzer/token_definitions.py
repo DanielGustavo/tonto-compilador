@@ -1,4 +1,14 @@
-from custom_token import TokenEnum
+"""Definições dos lexemas da linguagem TONTO (a "tabela" do analisador).
+
+`reserved_words`: palavras que têm significado fixo na linguagem. Cada entrada
+mapeia o lexema para (nome do token no PLY, categoria usada nos relatórios).
+
+`token_definitions`: expressões regulares dos demais tokens. Veja em
+`lexer_rules.py` a nota sobre a ordem em que essas regras são efetivamente
+testadas pelo PLY.
+"""
+
+from .token_types import TokenEnum
 
 reserved_words = {
   # class stereotypes
