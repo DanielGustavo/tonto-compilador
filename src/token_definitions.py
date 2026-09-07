@@ -1,40 +1,31 @@
-__all__ = ["token_definitions", "TokenEnum"]
-
-
-class TokenEnum:
-  CLASS_STEREOTYPES = "CLASS_STEREOTYPES"
-  CLASS = "CLASS"
-  RELATION = "RELATION"
-  INSTANCE = "INSTANCE"
-
+from custom_token import TokenEnum
 
 reserved_words = {
-  TokenEnum.CLASS_STEREOTYPES: {
-    "event": "EVENT",
-    "situation": "SITUATION",
-    "process": "PROCESS",
-    "category": "CATEGORY",
-    "mixin": "MIXIN",
-    "phaseMixin": "PHASEMIXIN",
-    "roleMixin": "ROLEMIXIN",
-    "historicalRoleMixin": "HISTORICALROLEMIXIN",
-    "kind": "KIND",
-    "collective": "COLLECTIVE",
-    "quantity": "QUANTITY",
-    "quality": "QUALITY",
-    "mode": "MODE",
-    "intrisicMode": "INTRISICMODE",
-    "extrinsicMode": "EXTRINSICMODE",
-    "subkind": "SUBKIND",
-    "phase": "PHASE",
-    "role": "ROLE",
-    "historicalRole": "HISTORICALROLE",
-  }
+  # class stereotypes
+  "event": ("EVENT", TokenEnum.CLASS_STEREOTYPES),
+  "situation": ("SITUATION", TokenEnum.CLASS_STEREOTYPES),
+  "process": ("PROCESS", TokenEnum.CLASS_STEREOTYPES),
+  "category": ("CATEGORY", TokenEnum.CLASS_STEREOTYPES),
+  "mixin": ("MIXIN", TokenEnum.CLASS_STEREOTYPES),
+  "phaseMixin": ("PHASEMIXIN", TokenEnum.CLASS_STEREOTYPES),
+  "roleMixin": ("ROLEMIXIN", TokenEnum.CLASS_STEREOTYPES),
+  "historicalRoleMixin": ("HISTORICALROLEMIXIN", TokenEnum.CLASS_STEREOTYPES),
+  "kind": ("KIND", TokenEnum.CLASS_STEREOTYPES),
+  "collective": ("COLLECTIVE", TokenEnum.CLASS_STEREOTYPES),
+  "quantity": ("QUANTITY", TokenEnum.CLASS_STEREOTYPES),
+  "quality": ("QUALITY", TokenEnum.CLASS_STEREOTYPES),
+  "mode": ("MODE", TokenEnum.CLASS_STEREOTYPES),
+  "intrisicMode": ("INTRISICMODE", TokenEnum.CLASS_STEREOTYPES),
+  "extrinsicMode": ("EXTRINSICMODE", TokenEnum.CLASS_STEREOTYPES),
+  "subkind": ("SUBKIND", TokenEnum.CLASS_STEREOTYPES),
+  "phase": ("PHASE", TokenEnum.CLASS_STEREOTYPES),
+  "role": ("ROLE", TokenEnum.CLASS_STEREOTYPES),
+  "historicalRole": ("HISTORICALROLE", TokenEnum.CLASS_STEREOTYPES),
+  # ...
 }
 
 token_definitions = {
-  TokenEnum.CLASS_STEREOTYPES: reserved_words[TokenEnum.CLASS_STEREOTYPES],
-  TokenEnum.CLASS: r"^[A-Z][a-zA-Z_]*$",
-  TokenEnum.RELATION: r"^[a-z][a-zA-Z_]*$",
-  TokenEnum.INSTANCE: r"^[a-zA-Z][a-zA-Z_0-9]*[0-9]+$",
+  TokenEnum.INSTANCE_ID: r"[a-zA-Z_][a-zA-Z0-9_]*[0-9]",
+  TokenEnum.CLASS_ID: r"[A-Z_][a-zA-Z_]*",
+  TokenEnum.RELATION_ID: r"[a-z_][a-zA-Z_]*",
 }

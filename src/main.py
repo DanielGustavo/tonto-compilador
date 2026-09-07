@@ -1,38 +1,21 @@
-import re
-
 from ply import lex
 
-from token_definitions import TokenEnum, token_definitions
+from custom_token import CustomToken, TokenEnum
+from token_definitions import reserved_words, token_definitions
+from utils.token_def import token_def
 
-reserved = {}
-tokens = []
+# add reserved words
+tokens = [token for token, _ in reserved_words.values()]
 
-for token, rule in token_definitions.items():
-  if type(rule) is dict:
-    reserved.update(rule)
-    tokens += rule.values()
-  else:
-    tokens.append(token)
+# add token types
+for token_definition, _ in token_definitions.items():
+  tokens.append(token_definition.value)
 
-
-def t_ID(t):
-  r"[a-zA-Z0-9_]+"
-  reserved_word = reserved.get(t.value)
-
-  if reserved_word is not None:
-    t.type = reserved_word
-  elif re.match(token_definitions[TokenEnum.CLASS], t.value):
-    t.type = TokenEnum.CLASS
-  elif re.match(token_definitions[TokenEnum.RELATION], t.value):
-    t.type = TokenEnum.RELATION
-  elif re.match(token_definitions[TokenEnum.INSTANCE], t.value):
-    t.type = TokenEnum.INSTANCE
-  else:
-    # add diagnostic method
-    return None
-
-  return t
-
+# define tokens handlers (the order matters)
+t_INSTANCE_ID = token_def(TokenEnum.INSTANCE_ID)
+t_CLASS_ID = token_def(TokenEnum.CLASS_ID)
+t_RELATION_ID = token_def(TokenEnum.RELATION_ID)
+###
 
 t_ignore = " \t"
 
@@ -57,8 +40,11 @@ def t_error(t):
 
 lexer = lex.lex()
 lexer.input("""
-kind Cobertura_Da_Pizza8_
+kind CoberturaDaPizza09
 """)
 
-for token in lexer:
+for plyToken in lexer:
+  # use our custom token instead
+  token: CustomToken = plyToken.value
+
   print(token)
