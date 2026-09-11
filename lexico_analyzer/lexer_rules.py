@@ -8,6 +8,8 @@ Nada aqui é executado diretamente: quem constrói o lexer é `analyzer.py`, com
 `lex.lex(module=lexer_rules)`.
 """
 
+import itertools
+
 from ply import lex
 
 from .token_definitions import reserved_words, token_definitions
@@ -32,6 +34,15 @@ for token_definition in token_definitions:
 # --------------------------------------------------------------------------- #
 # Fábrica de regras (evita duplicar o mesmo corpo de função dezenas de vezes)
 # --------------------------------------------------------------------------- #
+
+
+# O PLY decide a ordem de teste das regras `t_*` pela linha em que a função foi
+# definida (`__code__.co_firstlineno`). Como todas nascem de `def t_token(t):`
+# dentro da fábrica abaixo, elas empatariam nessa linha; usamos este contador
+# para atribuir a cada uma um "número de linha" artificial e crescente, na
+# ordem em que `token_def(...)` é chamado em `lexer_rules.py` — é isso que
+# garante, por exemplo, que `INSTANCE_ID` seja testado antes de `CLASS_ID`.
+_rule_order = itertools.count(1)
 
 
 def token_def(token_type: TokenEnum):
@@ -60,17 +71,14 @@ def token_def(token_type: TokenEnum):
     )
     return t
 
+  t_token.__code__ = t_token.__code__.replace(co_firstlineno=next(_rule_order))
+
   return t_token
 
 
 # --------------------------------------------------------------------------- #
-# Regras propriamente ditas
-#
-# ATENÇÃO: o PLY ordena as regras-função pela linha em que foram definidas. Como
-# todas nascem da mesma linha da fábrica `token_def`, o desempate acaba sendo
-# alfabético pelo nome do token — e NÃO a ordem abaixo. A ordem aqui é apenas
-# organizacional/didática. (Consequência conhecida: `CLASS_ID` é testado antes
-# de `INSTANCE_ID`, então `Role_Name1` é lido como `Role_Name` + erro no `1`.)
+# A ordem abaixo importa: é ela quem decide, em caso de ambiguidade, qual regra
+# o PLY testa primeiro (ver o contador `_rule_order` em `token_def`).
 # --------------------------------------------------------------------------- #
 
 # tipos e identificadores
