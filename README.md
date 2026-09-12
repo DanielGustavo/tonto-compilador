@@ -173,15 +173,40 @@ Escolha o número do arquivo a analisar:
 
 ### <a name="saida-do-sistema"></a> Saída do sistema
 
-Visão analítica dos tokens: cada linha do código-fonte seguida dos tokens que
-ela gerou, com categoria, lexema, linha e coluna.
+Visão analítica dos tokens: cada linha do código-fonte seguida de uma tabela
+com os tokens que ela gerou (valor, coluna, tipo e classificação). A
+classificação é só um agrupamento didático dos tipos — usado apenas na
+exibição, não muda o tipo real atribuído pelo lexer. Símbolos (parênteses,
+chaves, associação, cardinalidade, ...) não pertencem a nenhuma
+classificação, então a coluna fica em branco para eles.
 
 ```
-4: subkind CarAgency specializes Organization
-  CUSTOM_TOKEN(TokenEnum.CLASS_STEREOTYPES, subkind, line=4, column=1)
-  CUSTOM_TOKEN(TokenEnum.CLASS_ID, CarAgency, line=4, column=9)
-  CUSTOM_TOKEN(TokenEnum.KEYWORDS, specializes, line=4, column=19)
-  CUSTOM_TOKEN(TokenEnum.CLASS_ID, Organization, line=4, column=31)
+linha 4: "subkind CarAgency specializes Organization"
+┌──────────────┬────────┬───────────────────┬─────────────────────────┐
+│ Valor        │ Coluna │ Tipo              │ Classificação           │
+├──────────────┼────────┼───────────────────┼─────────────────────────┤
+│ subkind      │ 1      │ CLASS_STEREOTYPES │ Estereótipos de classe  │
+│ CarAgency    │ 9      │ CLASS_ID          │ Classes                 │
+│ specializes  │ 19     │ KEYWORDS          │ Palavras reservadas     │
+│ Organization │ 31     │ CLASS_ID          │ Classes                 │
+└──────────────┴────────┴───────────────────┴─────────────────────────┘
+```
+
+Em seguida, a contagem de tokens reconhecidos por classificação (tipos sem
+classificação, como símbolos, não entram nesse resumo, mas continuam
+contados no total). Os tokens e a contagem por tipo também são exportados
+para `lexico_analyzer/exports/<nome_do_arquivo>.json`:
+
+```
+--- Contagem de tokens por classificação ---
+  Palavras reservadas: 4
+  Classes: 8
+  Estereótipos de classe: 4
+  ...
+
+Total: 37 tokens
+
+Tokens e contagem exportados para: lexico_analyzer/exports/car.json
 ```
 
 Ao final, o resumo dos erros léxicos encontrados (ou a confirmação de que não

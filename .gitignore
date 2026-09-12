@@ -6,6 +6,9 @@ __pycache__/
 parser.out
 parsetab.py
 
+# token count exports
+lexico_analyzer/exports/
+
 .ruff_cache/
 
 .venv/

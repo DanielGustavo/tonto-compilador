@@ -12,7 +12,13 @@ import sys
 from pathlib import Path
 
 from lexico_analyzer.analyzer import analisar_arquivo
-from lexico_analyzer.reporter import imprimir_erros, imprimir_visao_analitica
+from lexico_analyzer.reporter import (
+  count_tokens_by_category,
+  export_tokens_json,
+  imprimir_erros,
+  imprimir_visao_analitica,
+  print_token_count,
+)
 
 PASTA_DE_EXEMPLOS = Path(__file__).parent / "tonto_examples"
 
@@ -81,6 +87,11 @@ def main() -> None:
   tokens, erros, codigo_fonte = analisar_arquivo(caminho)
 
   imprimir_visao_analitica(tokens, codigo_fonte)
+
+  count = count_tokens_by_category(tokens)
+  print_token_count(count)
+  export_tokens_json(caminho, tokens, count)
+
   imprimir_erros(erros)
 
 
