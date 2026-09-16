@@ -145,7 +145,4 @@ def t_error(t):
     }
   )
 
-  print(
-    f"[ERRO LÉXICO] linha {t.lineno}, coluna {column}: caractere inesperado {bad!r}"
-  )
   t.lexer.skip(1)

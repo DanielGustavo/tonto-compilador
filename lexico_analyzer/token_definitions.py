@@ -101,9 +101,9 @@ token_definitions = {
   TokenEnum.COMPOSITION_RO: r"--<o>",
   TokenEnum.ASSOCIATION: r"--",
   TokenEnum.CARDINALITY: r"\[[\d\*\.]+\]",
-  TokenEnum.INSTANCE_ID: r"[a-zA-Z_][a-zA-Z0-9_]*[0-9]",
-  TokenEnum.CLASS_ID: r"[A-Z_][a-zA-Z_]*",
-  TokenEnum.RELATION_ID: r"[a-z_][a-zA-Z_]*",
+  TokenEnum.INSTANCE_ID: r"[a-zA-Z][a-zA-Z0-9_]*[0-9]",
+  TokenEnum.CLASS_ID: r"[A-Z][a-zA-Z_]*",
+  TokenEnum.RELATION_ID: r"[a-z][a-zA-Z_]*",
   # literals
   TokenEnum.LPAREN: r"\(",
   TokenEnum.RPAREN: r"\)",
