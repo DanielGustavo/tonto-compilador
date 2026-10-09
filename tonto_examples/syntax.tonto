@@ -1,0 +1,11 @@
+import Hospital
+import Car
+
+package Syntax_test
+
+enum Especialidade {
+    Clinico_Geral01,
+    Pediatra02,
+    Ginecologista03,
+    Dentista04
+}

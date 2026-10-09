@@ -31,6 +31,7 @@ reserved_words = {
   "phase": ("PHASE", TokenEnum.CLASS_STEREOTYPES),
   "role": ("ROLE", TokenEnum.CLASS_STEREOTYPES),
   "historicalRole": ("HISTORICALROLE", TokenEnum.CLASS_STEREOTYPES),
+  "relator": ("RELATOR", TokenEnum.CLASS_STEREOTYPES),
   # relation stereotypes
   "material": ("MATERIAL", TokenEnum.RELATION_STEREOTYPES),
   "derivation": ("DERIVATION", TokenEnum.RELATION_STEREOTYPES),
@@ -72,7 +73,6 @@ reserved_words = {
   "redefines": ("REDEFINES", TokenEnum.META_ATTRIBUTES),
   # keywords
   "import": ("IMPORT", TokenEnum.KEYWORDS),
-  "relator": ("RELATOR", TokenEnum.KEYWORDS),
   "specializes": ("SPECIALIZES", TokenEnum.KEYWORDS),
   "of": ("OF", TokenEnum.KEYWORDS),
   "datatype": ("DATATYPE", TokenEnum.KEYWORDS),

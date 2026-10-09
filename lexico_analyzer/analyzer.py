@@ -12,8 +12,12 @@ from ply import lex
 from . import lexer_rules
 from .token_types import CustomToken
 
-# O lexer é construído uma única vez, a partir das regras de `lexer_rules`.
-lexer = lex.lex(module=lexer_rules)
+
+def construir_lexer():
+  return lex.lex(module=lexer_rules)
+
+
+lexer = construir_lexer()
 
 
 def analisar_codigo(codigo_fonte: str) -> tuple[list[CustomToken], list[dict]]:

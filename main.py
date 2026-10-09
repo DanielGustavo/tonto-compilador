@@ -1,17 +1,22 @@
 """Ponto de entrada do compilador TONTO.
 
 Orquestra o fluxo: escolhe o arquivo de entrada (por argumento ou pelo menu de
-exemplos), chama o Analisador Léxico e manda o resultado para a apresentação.
+exemplos), chama o Analisador Léxico e/ou o Analisador Sintático e entrega o
+resultado aos módulos de apresentação.
 
 Uso:
-    python3 main.py                          # menu com os exemplos disponíveis
-    python3 main.py tonto_examples/car.tonto # analisa um arquivo específico
+    python3 main.py
+    python3 main.py tonto_examples/car.tonto
+    python3 main.py --lexic tonto_examples/car.tonto
+    python3 main.py --syntax tonto_examples/car.tonto
+    python3 main.py --lexic
+    python3 main.py --syntax
 """
 
 import sys
 from pathlib import Path
 
-from lexico_analyzer.analyzer import analisar_arquivo
+from lexico_analyzer.analyzer import analisar_arquivo as analisar_lexicamente
 from lexico_analyzer.reporter import (
   count_tokens_by_category,
   export_tokens_json,
@@ -20,7 +25,10 @@ from lexico_analyzer.reporter import (
   print_token_count,
 )
 
+from syntax_analyzer.parser import analisar_arquivo as analisar_sintaticamente
+
 PASTA_DE_EXEMPLOS = Path(__file__).parent / "tonto_examples"
+MODOS = {"--lexic": "lexic", "--syntax": "syntax"}
 
 
 def listar_e_mapear_exemplos(pasta: Path) -> dict[str, Path] | None:
@@ -47,14 +55,24 @@ def listar_e_mapear_exemplos(pasta: Path) -> dict[str, Path] | None:
   return mapa
 
 
-def escolher_arquivo() -> Path | None:
+def escolher_modo(argumentos):
+  if argumentos and argumentos[0] in MODOS:
+    return (MODOS[argumentos[0]]), argumentos[1:]
+
+  return MODOS.values(), argumentos
+
+
+def escolher_arquivo(argumentos: list[str]) -> Path | None:
   """Resolve o arquivo de entrada: argumento da linha de comando ou menu."""
-  if len(sys.argv) > 2:
-    print(f"uso: python3 {Path(__file__).name} [caminho_do_arquivo.tonto]")
+  if len(argumentos) > 1:
+    print(
+      f"uso: python3 {Path(__file__).name} "
+      "[--lexic|--syntax] [caminho_do_arquivo.tonto]"
+    )
     return None
 
-  if len(sys.argv) == 2:
-    caminho = Path(sys.argv[1])
+  if len(argumentos) == 1:
+    caminho = Path(argumentos[0])
 
     if not caminho.is_file():
       print(f"arquivo não encontrado: {caminho}")
@@ -76,15 +94,10 @@ def escolher_arquivo() -> Path | None:
   return caminho
 
 
-def main() -> None:
-  caminho = escolher_arquivo()
+def executar_analise_lexica(caminho: Path) -> None:
+  print("\n============ ANÁLISE LÉXICA ============")
 
-  if caminho is None:
-    sys.exit(1)
-
-  print(f"\n>>> Analisando: {caminho.name}\n")
-
-  tokens, erros, codigo_fonte = analisar_arquivo(caminho)
+  tokens, erros, codigo_fonte = analisar_lexicamente(caminho)
 
   imprimir_visao_analitica(tokens, codigo_fonte)
 
@@ -93,6 +106,46 @@ def main() -> None:
   export_tokens_json(caminho, tokens, count)
 
   imprimir_erros(erros)
+
+
+def executar_analise_sintatica(caminho: Path) -> None:
+  print("\n============ ANÁLISE SINTÁTICA ============")
+
+  node, erros, codigo_fonte = analisar_sintaticamente(caminho)
+
+  def print_node(node, ident=0):
+    print(f"{' ' * ident * 4}{node.label()}")
+
+    if node.children:
+      for childrenNode in node.children():
+        print_node(childrenNode, ident + 1)
+
+  if node:
+    print_node(node)
+  # imprimir_visao_analitica(tokens, codigo_fonte)
+
+  # count = count_tokens_by_category(tokens)
+  # print_token_count(count)
+  # export_tokens_json(caminho, tokens, count)
+
+  # imprimir_erros(erros)
+
+
+def main() -> None:
+  argumentos = sys.argv[1:]
+
+  modo, argumentos = escolher_modo(argumentos)
+  caminho = escolher_arquivo(argumentos)
+
+  if caminho is None:
+    sys.exit(1)
+
+  print(f"\n>>> Analisando: {caminho.name}")
+
+  if "lexic" in modo:
+    executar_analise_lexica(caminho)
+  if "syntax" in modo:
+    executar_analise_sintatica(caminho)
 
 
 if __name__ == "__main__":
