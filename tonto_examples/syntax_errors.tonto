@@ -1,0 +1,17 @@
+import Hospital
+
+package Syntax_errors_test
+
+enum Especialidade {
+    Clinico_Geral01,
+    Pediatra02
+    Ginecologista03,
+    Dentista04
+}
+
+enum EEspecialidade {
+    Clinico_Geral01,
+    Pediatra02,
+    Ginecologista03,
+    Dentista04
+}

@@ -1,11 +1,8 @@
 from lexico_analyzer import lexer_rules
 
 from . import ast_nodes
+from .error_handling import p_error
 
-syntax_errors: list[dict] = []
-
-# Preenchido por `parser.py` logo após `yacc.yacc(...)`
-analyzer = None
 tokens = lexer_rules.tokens
 start = "program"
 
@@ -65,7 +62,12 @@ def p_package_body(p):
   package_body : package_body declaration
                | empty
   """
-  p[0] = [*p[1], p[2]] if len(p) == 3 else []
+  if len(p) == 2:
+    p[0] = []
+    return
+
+  # `p[2]` é `None` quando a declaração foi descartada por `p_declaration_error`
+  p[0] = [*p[1], p[2]] if p[2] is not None else list(p[1])
 
 
 def p_declaration(p):
@@ -74,6 +76,14 @@ def p_declaration(p):
   #            | ..._declaration3
   #            | ..._declaration4
   p[0] = p[1]
+
+
+def p_declaration_error(p):
+  "declaration : error RBRACE"
+  # Recuperação de erro: ao achar um token inesperado dentro de uma
+  # declaração, descarta tudo até o próximo '}' e segue com a análise a
+  # partir da próxima declaração, em vez de abortar o arquivo inteiro.
+  p.parser.errok()
 
 
 # --------------------------------------------------------------------------- #

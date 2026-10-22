@@ -12,11 +12,12 @@ import itertools
 
 from ply import lex
 
+from .errors import LexicalError
 from .token_definitions import reserved_words, token_definitions
 from .token_types import CustomToken, TokenEnum
 
 # Erros léxicos encontrados na análise atual (preenchido por `t_error`).
-erros_lexicos: list[dict] = []
+erros_lexicos: list[LexicalError] = []
 
 
 # --------------------------------------------------------------------------- #
@@ -137,12 +138,12 @@ def t_error(t):
   column = t.lexpos - last_newline
 
   erros_lexicos.append(
-    {
-      "value": bad,
-      "line": t.lineno,
-      "column": column,
-      "message": f"caractere inesperado {bad!r}",
-    }
+    LexicalError(
+      value=bad,
+      line=t.lineno,
+      column=column,
+      message=f"caractere inesperado {bad!r}",
+    )
   )
 
   t.lexer.skip(1)

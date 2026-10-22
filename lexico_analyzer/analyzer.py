@@ -10,6 +10,7 @@ from pathlib import Path
 from ply import lex
 
 from . import lexer_rules
+from .errors import LexicalError
 from .token_types import CustomToken
 
 
@@ -20,7 +21,7 @@ def construir_lexer():
 lexer = construir_lexer()
 
 
-def analisar_codigo(codigo_fonte: str) -> tuple[list[CustomToken], list[dict]]:
+def analisar_codigo(codigo_fonte: str) -> tuple[list[CustomToken], list[LexicalError]]:
   """Roda a análise léxica sobre uma string e devolve (tokens, erros)."""
   lexer_rules.erros_lexicos.clear()
 
@@ -33,7 +34,7 @@ def analisar_codigo(codigo_fonte: str) -> tuple[list[CustomToken], list[dict]]:
   return tokens, list(lexer_rules.erros_lexicos)
 
 
-def analisar_arquivo(caminho: Path) -> tuple[list[CustomToken], list[dict], str]:
+def analisar_arquivo(caminho: Path) -> tuple[list[CustomToken], list[LexicalError], str]:
   """Lê um arquivo `.tonto` e devolve (tokens, erros, código-fonte)."""
   codigo_fonte = Path(caminho).read_text(encoding="utf-8")
   tokens, erros = analisar_codigo(codigo_fonte)

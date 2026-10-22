@@ -8,6 +8,7 @@ JSON, CSV) mexe só neste arquivo.
 import json
 from pathlib import Path
 
+from .errors import LexicalError
 from .token_types import CustomToken, TokenEnum
 
 # Agrupamento didático dos tipos (`TokenEnum`) em classificações, usado só na
@@ -89,7 +90,7 @@ def _print_token_table(tokens: list[CustomToken]) -> None:
   print(format_border("└", "┴", "┘"))
 
 
-def imprimir_erros(erros: list[dict]) -> None:
+def imprimir_erros(erros: list[LexicalError]) -> None:
   """Resumo dos erros léxicos encontrados, agrupados por linha."""
   if not erros:
     print("\nNenhum erro léxico encontrado.")
@@ -98,7 +99,7 @@ def imprimir_erros(erros: list[dict]) -> None:
   print(f"\n--- Erros léxicos ({len(erros)}) ---")
 
   for erro in erros:
-    print(f"  linha {erro['line']}, coluna {erro['column']}: {erro['message']}")
+    print(f"  linha {erro.line}, coluna {erro.column}: {erro.message}")
 
 
 def count_tokens_by_category(tokens: list[CustomToken]) -> dict[TokenEnum, int]:

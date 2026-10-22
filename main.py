@@ -26,6 +26,7 @@ from lexico_analyzer.reporter import (
 )
 
 from syntax_analyzer.parser import analisar_arquivo as analisar_sintaticamente
+from syntax_analyzer.reporter import print_syntax_errors
 
 PASTA_DE_EXEMPLOS = Path(__file__).parent / "tonto_examples"
 MODOS = {"--lexic": "lexic", "--syntax": "syntax"}
@@ -111,7 +112,7 @@ def executar_analise_lexica(caminho: Path) -> None:
 def executar_analise_sintatica(caminho: Path) -> None:
   print("\n============ ANÁLISE SINTÁTICA ============")
 
-  node, erros, codigo_fonte = analisar_sintaticamente(caminho)
+  node, erros_lexicos, erros_sintaticos, _codigo_fonte = analisar_sintaticamente(caminho)
 
   def print_node(node, ident=0):
     print(f"{' ' * ident * 4}{node.label()}")
@@ -122,13 +123,9 @@ def executar_analise_sintatica(caminho: Path) -> None:
 
   if node:
     print_node(node)
-  # imprimir_visao_analitica(tokens, codigo_fonte)
 
-  # count = count_tokens_by_category(tokens)
-  # print_token_count(count)
-  # export_tokens_json(caminho, tokens, count)
-
-  # imprimir_erros(erros)
+  imprimir_erros(erros_lexicos)
+  print_syntax_errors(erros_sintaticos)
 
 
 def main() -> None:
