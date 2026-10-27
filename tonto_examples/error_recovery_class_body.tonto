@@ -1,0 +1,17 @@
+package ErrorRecoveryClassBody
+
+kind Person {
+    name: string
+    this is not a valid member
+    birthDate: date {const}
+}
+
+kind AfterPerson
+
+datatype Address {
+    street: string
+    this is not a valid member
+    zipCode: string
+}
+
+kind AfterAddress

@@ -82,10 +82,8 @@ def p_declaration(p):
 
 
 def p_declaration_error(p):
-  "declaration : error RBRACE"
-  # Recuperação de erro: ao achar um token inesperado dentro de uma
-  # declaração, descarta tudo até o próximo '}' e segue com a análise a
-  # partir da próxima declaração, em vez de abortar o arquivo inteiro.
+  "declaration : error"
+  # Recuperação de erro de nível de pacote
   p.parser.errok()
 
 
@@ -192,6 +190,13 @@ def p_class_members_list(p):
   p[0] = [*p[1], p[2]] if len(p) == 3 else []
 
 
+def p_class_members_list_error(p):
+  "class_members_list : class_members_list error"
+  # Recuperação de erro local ao corpo da classe
+  p.parser.errok()
+  p[0] = p[1]
+
+
 def p_class_member(p):
   """
   class_member : attribute_declaration
@@ -206,6 +211,13 @@ def p_attributes_list(p):
                    | empty
   """
   p[0] = [*p[1], p[2]] if len(p) == 3 else []
+
+
+def p_attributes_list_error(p):
+  "attributes_list : attributes_list error"
+  # Mesma ideia de class_members_list_error, para o corpo de um datatype.
+  p.parser.errok()
+  p[0] = p[1]
 
 
 def p_attribute_declaration(p):

@@ -1,0 +1,19 @@
+package ErrorRecoveryPackageLevel
+
+kind Person
+
+phase Child specializes Person
+
+phase Adult specializes Person
+
+disjoint complete genset PersonAgeGroup where Child Adult specializes Person
+
+kind ValidClassAfterGenset
+
+kind EmploymentContract
+
+kind Employee
+
+relation EmploymentContract [1..*] -- [1] Employee
+
+kind ValidClassAfterRelation
