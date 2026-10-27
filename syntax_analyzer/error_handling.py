@@ -54,6 +54,15 @@ _SUPPORTED_TOKEN_NAMES = {
   "DERIVED",
   "SUBSETS",
   "REDEFINES",
+  # genset (generalization sets)
+  "GENSET",
+  "DISJOINT",
+  "OVERLAPPING",
+  "COMPLETE",
+  "INCOMPLETE",
+  "GENERAL",
+  "SPECIFICS",
+  "WHERE",
 }
 
 _SUGGESTIONS_BY_TOKEN = {
@@ -83,9 +92,9 @@ def _suggestion_for_token(token_type: str, lexeme: str) -> str:
     return (
       "o analisador sintático atual só reconhece declarações 'enum', "
       "declarações de classe (estereótipo + nome, com especialização e "
-      "atributos opcionais) e declarações de 'datatype' (nome + atributos) "
-      "dentro de um pacote; relações e genset ainda não são suportados por "
-      "esta gramática."
+      "atributos opcionais), declarações de 'datatype' (nome + atributos) e "
+      "declarações de 'genset' (generalization sets) dentro de um pacote; "
+      "relações ainda não são suportadas por esta gramática."
     )
 
   return f"verifique a sintaxe perto de '{lexeme}' (token {token_type})."

@@ -1,0 +1,30 @@
+package GensetDeclarationTest
+
+kind Person {
+    name : string
+    birthDate : date {const}
+}
+
+phase Child specializes Person
+
+phase Adult specializes Person
+
+disjoint complete genset PersonAgeGroup where Child, Adult specializes Person
+
+genset PersonAgeGroupBlock {
+    general Person
+    specifics Child, Adult
+}
+
+kind Organization
+
+category LegalEntity specializes Organization
+
+category NaturalEntity specializes Organization
+
+overlapping incomplete genset EntityNature where LegalEntity, NaturalEntity specializes Organization
+
+genset EntityNatureBlock {
+    general Organization
+    specifics LegalEntity, NaturalEntity
+}

@@ -85,6 +85,23 @@ class DataTypeDeclaration(Node):
 
 
 @dataclass(frozen=True)
+class GeneralizationSet(Node):
+  """Genset: agrupamento de generalização (classe geral + classes específicas)."""
+
+  name: str
+  general: str
+  specifics: list[str]
+  disjointness: str | None
+  completeness: str | None
+
+  def label(self) -> str:
+    modifiers = " ".join(m for m in (self.disjointness, self.completeness) if m)
+    prefix = f"{modifiers} " if modifiers else ""
+    specifics = ", ".join(self.specifics)
+    return f"{prefix}genset {self.name} where {specifics} specializes {self.general}"
+
+
+@dataclass(frozen=True)
 class Import(Node):
   """Importação de outro pacote."""
 

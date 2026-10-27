@@ -1,0 +1,23 @@
+package GensetDeclarationErrorsTest
+
+kind Person
+
+phase Child specializes Person
+
+phase Adult specializes Person
+
+genset {
+    general Person
+    specifics Child, Adult
+}
+
+genset MissingComma {
+    general Person
+    specifics Child Adult
+}
+
+genset MissingGeneral {
+    specifics Child, Adult
+}
+
+kind Organization

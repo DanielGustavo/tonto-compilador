@@ -75,8 +75,8 @@ def p_declaration(p):
   declaration : enum_declaration
               | class_declaration
               | datatype_declaration
+              | genset_declaration
   """
-  #            | ..._declaration4
   p[0] = p[1]
 
 
@@ -263,3 +263,77 @@ def p_datatype_declaration(p):
   p[0] = ast_nodes.DataTypeDeclaration(
     line=p[1].line, column=p[1].column, name=p[2].value, attributes=p[4]
   )
+
+
+# --------------------------------------------------------------------------- #
+# 5. Generalizações (genset)
+# --------------------------------------------------------------------------- #
+
+
+def p_genset_declaration_where(p):
+  """
+  genset_declaration : opt_disjointness opt_completeness GENSET genset_name \
+                        WHERE class_id_list SPECIALIZES CLASS_ID
+  """
+  genset_token = p[3]
+
+  p[0] = ast_nodes.GeneralizationSet(
+    line=genset_token.line,
+    column=genset_token.column,
+    name=p[4].value,
+    general=p[8].value,
+    specifics=p[6],
+    disjointness=p[1],
+    completeness=p[2],
+  )
+
+
+def p_genset_declaration_block(p):
+  """
+  genset_declaration : opt_disjointness opt_completeness GENSET genset_name \
+                        LBRACE GENERAL CLASS_ID SPECIFICS class_id_list RBRACE
+  """
+  genset_token = p[3]
+
+  p[0] = ast_nodes.GeneralizationSet(
+    line=genset_token.line,
+    column=genset_token.column,
+    name=p[4].value,
+    general=p[7].value,
+    specifics=p[9],
+    disjointness=p[1],
+    completeness=p[2],
+  )
+
+
+def p_genset_name(p):
+  "genset_name : CLASS_ID"
+  p[0] = p[1]
+
+
+def p_opt_disjointness(p):
+  """
+  opt_disjointness : DISJOINT
+                    | OVERLAPPING
+                    | empty
+  """
+  p[0] = p[1].value if p[1] is not None else None
+
+
+def p_opt_completeness(p):
+  """
+  opt_completeness : COMPLETE
+                    | INCOMPLETE
+                    | empty
+  """
+  p[0] = p[1].value if p[1] is not None else None
+
+
+def p_class_id_list(p):
+  """
+  class_id_list : CLASS_ID
+                 | class_id_list COMMA CLASS_ID
+  """
+  token = p[1] if len(p) == 2 else p[3]
+
+  p[0] = [token.value] if len(p) == 2 else [*p[1], token.value]
