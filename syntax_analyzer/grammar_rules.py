@@ -71,8 +71,10 @@ def p_package_body(p):
 
 
 def p_declaration(p):
-  "declaration : enum_declaration"
-  #            | ..._declaration2
+  """
+  declaration : enum_declaration
+              | class_declaration
+  """
   #            | ..._declaration3
   #            | ..._declaration4
   p[0] = p[1]
@@ -117,3 +119,135 @@ def p_instances_list(p):
 def p_instance_name(p):
   "instance_name : INSTANCE_ID"
   p[0] = p[1]
+
+
+# --------------------------------------------------------------------------- #
+# 3. Classes
+# --------------------------------------------------------------------------- #
+
+
+def p_class_declaration(p):
+  "class_declaration : class_stereotype CLASS_ID opt_specializes opt_class_body"
+  stereotype = p[1]
+  name = p[2]
+
+  p[0] = ast_nodes.ClassDeclaration(
+    line=stereotype.line,
+    column=stereotype.column,
+    stereotype=stereotype.value,
+    name=name.value,
+    specializes=p[3],
+    attributes=p[4],
+  )
+
+
+def p_class_stereotype(p):
+  """
+  class_stereotype : KIND
+                    | SUBKIND
+                    | ROLE
+                    | PHASE
+                    | CATEGORY
+                    | MIXIN
+                    | PHASEMIXIN
+                    | ROLEMIXIN
+                    | HISTORICALROLEMIXIN
+                    | COLLECTIVE
+                    | QUANTITY
+                    | QUALITY
+                    | MODE
+                    | INTRISICMODE
+                    | EXTRINSICMODE
+                    | HISTORICALROLE
+                    | RELATOR
+                    | EVENT
+                    | SITUATION
+                    | PROCESS
+  """
+  p[0] = p[1]
+
+
+def p_opt_specializes(p):
+  """
+  opt_specializes : SPECIALIZES CLASS_ID
+                   | empty
+  """
+  p[0] = p[2].value if len(p) == 3 else None
+
+
+def p_opt_class_body(p):
+  """
+  opt_class_body : LBRACE attributes_list RBRACE
+                  | empty
+  """
+  p[0] = p[2] if len(p) == 4 else []
+
+
+def p_attributes_list(p):
+  """
+  attributes_list : attributes_list attribute_declaration
+                   | empty
+  """
+  p[0] = [*p[1], p[2]] if len(p) == 3 else []
+
+
+def p_attribute_declaration(p):
+  "attribute_declaration : RELATION_ID COLON type_name opt_cardinality opt_modifiers"
+  name = p[1]
+
+  p[0] = ast_nodes.Attribute(
+    line=name.line,
+    column=name.column,
+    name=name.value,
+    type_name=p[3],
+    cardinality=p[4],
+    modifiers=p[5],
+  )
+
+
+def p_type_name(p):
+  """
+  type_name : NUMBER
+            | STRING
+            | BOOLEAN
+            | DATE
+            | TIME
+            | DATETIME
+            | CLASS_ID
+  """
+  p[0] = p[1].value
+
+
+def p_opt_cardinality(p):
+  """
+  opt_cardinality : CARDINALITY
+                   | empty
+  """
+  p[0] = p[1].value if p[1] is not None else None
+
+
+def p_opt_modifiers(p):
+  """
+  opt_modifiers : LBRACE modifiers_list RBRACE
+                 | empty
+  """
+  p[0] = p[2] if len(p) == 4 else []
+
+
+def p_modifiers_list(p):
+  """
+  modifiers_list : modifiers_list COMMA modifier
+                 | modifier
+  """
+  p[0] = [*p[1], p[3]] if len(p) == 4 else [p[1]]
+
+
+def p_modifier(p):
+  """
+  modifier : ORDERED
+           | CONST
+           | DERIVED
+           | SUBSETS
+           | REDEFINES
+  """
+  p[0] = p[1].value

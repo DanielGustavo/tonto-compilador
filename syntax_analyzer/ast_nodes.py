@@ -38,6 +38,39 @@ class Enumeration(Node):
 
 
 @dataclass(frozen=True)
+class Attribute(Node):
+  """Atributo próprio de uma classe."""
+
+  name: str
+  type_name: str
+  cardinality: str | None
+  modifiers: list[str]
+
+  def label(self) -> str:
+    suffix = f" {self.cardinality}" if self.cardinality else ""
+    if self.modifiers:
+      suffix += " {" + ", ".join(self.modifiers) + "}"
+    return f"attribute {self.name}: {self.type_name}{suffix}"
+
+
+@dataclass(frozen=True)
+class ClassDeclaration(Node):
+  """Declaração de classe (estereótipo + nome + especialização + atributos)."""
+
+  stereotype: str
+  name: str
+  specializes: str | None
+  attributes: list[Attribute]
+
+  def label(self) -> str:
+    suffix = f" specializes {self.specializes}" if self.specializes else ""
+    return f"<<{self.stereotype}>> {self.name}{suffix}"
+
+  def children(self) -> list[Node]:
+    return list(self.attributes)
+
+
+@dataclass(frozen=True)
 class Import(Node):
   """Importação de outro pacote."""
 

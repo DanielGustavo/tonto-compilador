@@ -14,13 +14,55 @@ _RESERVED_TOKEN_NAMES = {token_name for token_name, _ in reserved_words.values()
 
 # Palavras reservadas que a gramática atual já sabe tratar; qualquer outra
 # reservada cai na sugestão de "ainda não suportado" em `_suggestion_for_token`.
-_SUPPORTED_TOKEN_NAMES = {"IMPORT", "PACKAGE", "ENUM"}
+_SUPPORTED_TOKEN_NAMES = {
+  "IMPORT",
+  "PACKAGE",
+  "ENUM",
+  # estereótipos de classe
+  "KIND",
+  "SUBKIND",
+  "ROLE",
+  "PHASE",
+  "CATEGORY",
+  "MIXIN",
+  "PHASEMIXIN",
+  "ROLEMIXIN",
+  "HISTORICALROLEMIXIN",
+  "COLLECTIVE",
+  "QUANTITY",
+  "QUALITY",
+  "MODE",
+  "INTRISICMODE",
+  "EXTRINSICMODE",
+  "HISTORICALROLE",
+  "RELATOR",
+  "EVENT",
+  "SITUATION",
+  "PROCESS",
+  # cláusula de especialização e tipos de atributo
+  "SPECIALIZES",
+  "NUMBER",
+  "STRING",
+  "BOOLEAN",
+  "DATE",
+  "TIME",
+  "DATETIME",
+  # meta-atributos
+  "ORDERED",
+  "CONST",
+  "DERIVED",
+  "SUBSETS",
+  "REDEFINES",
+}
 
 _SUGGESTIONS_BY_TOKEN = {
   "LBRACE": "verifique se o bloco anterior foi fechado corretamente antes de abrir um novo '{'.",
   "RBRACE": "verifique se sobra um '}' sem bloco correspondente, ou se falta abrir um bloco antes dele.",
   "COMMA": "verifique se há uma ',' sobrando ou faltando entre os itens.",
   "INSTANCE_ID": "verifique se falta uma ',' separando as instâncias do enum.",
+  "COLON": "verifique se o atributo está no formato 'nome : tipo'.",
+  "CLASS_ID": "verifique se o identificador de classe está no lugar certo (ex.: nome de classe, tipo de atributo ou alvo de 'specializes').",
+  "RELATION_ID": "verifique se o identificador está no lugar certo (ex.: nome de atributo, que deve começar com letra minúscula).",
 }
 
 
@@ -38,9 +80,10 @@ def _suggestion_for_token(token_type: str, lexeme: str) -> str:
 
   if token_type in _RESERVED_TOKEN_NAMES and token_type not in _SUPPORTED_TOKEN_NAMES:
     return (
-      "o analisador sintático atual só reconhece declarações 'enum' dentro "
-      "de um pacote; declarações de classes, relações e genset ainda não "
-      "são suportadas por esta gramática."
+      "o analisador sintático atual só reconhece declarações 'enum' e "
+      "declarações de classe (estereótipo + nome, com especialização e "
+      "atributos opcionais) dentro de um pacote; relações e genset ainda "
+      "não são suportados por esta gramática."
     )
 
   return f"verifique a sintaxe perto de '{lexeme}' (token {token_type})."
