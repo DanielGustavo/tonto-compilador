@@ -55,19 +55,46 @@ class Attribute(Node):
 
 @dataclass(frozen=True)
 class ClassDeclaration(Node):
-  """Declaração de classe (estereótipo + nome + especialização + atributos)."""
+  """Declaração de classe (estereótipo + nome + especialização + membros)."""
 
   stereotype: str
   name: str
   specializes: str | None
-  attributes: list[Attribute]
+  members: list[Node]
 
   def label(self) -> str:
     suffix = f" specializes {self.specializes}" if self.specializes else ""
     return f"<<{self.stereotype}>> {self.name}{suffix}"
 
   def children(self) -> list[Node]:
-    return list(self.attributes)
+    return list(self.members)
+
+
+@dataclass(frozen=True)
+class Relation(Node):
+  """Declaração de relação (interna a uma classe ou externa, a nível de pacote)."""
+
+  stereotype: str
+  source: str | None
+  source_cardinality: str | None
+  symbol: str
+  name: str | None
+  target_cardinality: str | None
+  target: str
+
+  def label(self) -> str:
+    source = self.source if self.source is not None else "(implicit)"
+    parts = [f"<<{self.stereotype}>>", source]
+    if self.source_cardinality:
+      parts.append(self.source_cardinality)
+    parts.append(self.symbol)
+    if self.name:
+      parts.append(self.name)
+      parts.append(self.symbol)
+    if self.target_cardinality:
+      parts.append(self.target_cardinality)
+    parts.append(self.target)
+    return " ".join(parts)
 
 
 @dataclass(frozen=True)

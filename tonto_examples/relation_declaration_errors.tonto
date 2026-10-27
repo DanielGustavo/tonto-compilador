@@ -1,0 +1,31 @@
+package RelationDeclarationErrorsTest
+
+kind University
+
+kind Department
+
+kind Employee
+
+kind EmploymentContract
+
+kind MissingStereotype {
+    -- involvesOwner -- [1] University
+}
+
+kind MissingSecondSymbol {
+    @material -- hasBook [1] Department
+}
+
+kind MissingTarget {
+    @componentOf [1] <>--
+}
+
+relation University [1..*] -- [1..*] Department
+
+kind Marker01 {
+}
+
+@mediation EmploymentContract [1..*] -- [1] Employee
+
+kind Marker02 {
+}

@@ -63,6 +63,33 @@ _SUPPORTED_TOKEN_NAMES = {
   "GENERAL",
   "SPECIFICS",
   "WHERE",
+  # relações
+  "RELATION",
+  "MATERIAL",
+  "DERIVATION",
+  "COMPARATIVE",
+  "MEDIATION",
+  "CHARACTERIZATION",
+  "EXTERNALDEPENDENCE",
+  "COMPONENTOF",
+  "MEMBEROF",
+  "SUBCOLLECTIONOF",
+  "SUBQUALITYOF",
+  "INSTANTIATION",
+  "TERMINATION",
+  "PARTICIPATIONAL",
+  "PARTICIPATION",
+  "HISTORICALDEPENDENCE",
+  "CREATION",
+  "MANIFESTATION",
+  "BRINGSABOUT",
+  "TRIGGERS",
+  "COMPOSITION",
+  "AGGREGATION",
+  "INHERENCE",
+  "VALUE",
+  "FORMAL",
+  "CONSTITUTION",
 }
 
 _SUGGESTIONS_BY_TOKEN = {
@@ -73,6 +100,8 @@ _SUGGESTIONS_BY_TOKEN = {
   "COLON": "verifique se o atributo está no formato 'nome : tipo'.",
   "CLASS_ID": "verifique se o identificador de classe está no lugar certo (ex.: nome de classe, tipo de atributo ou alvo de 'specializes').",
   "RELATION_ID": "verifique se o identificador está no lugar certo (ex.: nome de atributo, que deve começar com letra minúscula).",
+  "AT": "verifique se o estereótipo da relação (ex.: '@mediation') foi escrito logo após o '@', sem espaços.",
+  "RELATION": "verifique se o nome da classe de origem vem logo após 'relation'.",
 }
 
 
@@ -92,9 +121,10 @@ def _suggestion_for_token(token_type: str, lexeme: str) -> str:
     return (
       "o analisador sintático atual só reconhece declarações 'enum', "
       "declarações de classe (estereótipo + nome, com especialização e "
-      "atributos opcionais), declarações de 'datatype' (nome + atributos) e "
-      "declarações de 'genset' (generalization sets) dentro de um pacote; "
-      "relações ainda não são suportadas por esta gramática."
+      "atributos/relações opcionais), declarações de 'datatype' (nome + "
+      "atributos), declarações de 'genset' (generalization sets) e "
+      "declarações de relação (internas a uma classe ou externas, com "
+      "'relation') dentro de um pacote."
     )
 
   return f"verifique a sintaxe perto de '{lexeme}' (token {token_type})."

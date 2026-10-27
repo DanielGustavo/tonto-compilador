@@ -1,0 +1,33 @@
+package RelationDeclarationTest
+
+kind University {
+    address : string
+    @componentOf [1] <>-- [1..*] Department
+}
+
+kind Department
+
+kind EmploymentContract
+
+kind Employee
+
+relator CarOwnership {
+    @mediation
+    -- involvesOwner -- [1] University
+
+    @mediation
+    -- involvesProperty -- [1] Department
+}
+
+relator Relator_Name {
+    @mediation [1..*] -- [1..*] Employee
+    @mediation [1..*] -- [1..*] EmploymentContract
+}
+
+collective Lista_de_Itens {
+    @memberOf [0..*] <>-- [1..*] Department
+}
+
+@mediation relation EmploymentContract [1..*] -- [1] Employee
+
+@material relation University [1..*] -- tem_Departamento -- [1..*] Department

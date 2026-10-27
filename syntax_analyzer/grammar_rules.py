@@ -76,6 +76,7 @@ def p_declaration(p):
               | class_declaration
               | datatype_declaration
               | genset_declaration
+              | relation_declaration
   """
   p[0] = p[1]
 
@@ -137,7 +138,7 @@ def p_class_declaration(p):
     stereotype=stereotype.value,
     name=name.value,
     specializes=p[3],
-    attributes=p[4],
+    members=p[4],
   )
 
 
@@ -177,10 +178,26 @@ def p_opt_specializes(p):
 
 def p_opt_class_body(p):
   """
-  opt_class_body : LBRACE attributes_list RBRACE
+  opt_class_body : LBRACE class_members_list RBRACE
                   | empty
   """
   p[0] = p[2] if len(p) == 4 else []
+
+
+def p_class_members_list(p):
+  """
+  class_members_list : class_members_list class_member
+                      | empty
+  """
+  p[0] = [*p[1], p[2]] if len(p) == 3 else []
+
+
+def p_class_member(p):
+  """
+  class_member : attribute_declaration
+               | relation_end_declaration
+  """
+  p[0] = p[1]
 
 
 def p_attributes_list(p):
@@ -337,3 +354,130 @@ def p_class_id_list(p):
   token = p[1] if len(p) == 2 else p[3]
 
   p[0] = [token.value] if len(p) == 2 else [*p[1], token.value]
+
+
+# --------------------------------------------------------------------------- #
+# 6. Relações
+# --------------------------------------------------------------------------- #
+
+
+def p_relation_stereotype(p):
+  """
+  relation_stereotype : MATERIAL
+                       | DERIVATION
+                       | COMPARATIVE
+                       | MEDIATION
+                       | CHARACTERIZATION
+                       | EXTERNALDEPENDENCE
+                       | COMPONENTOF
+                       | MEMBEROF
+                       | SUBCOLLECTIONOF
+                       | SUBQUALITYOF
+                       | INSTANTIATION
+                       | TERMINATION
+                       | PARTICIPATIONAL
+                       | PARTICIPATION
+                       | HISTORICALDEPENDENCE
+                       | CREATION
+                       | MANIFESTATION
+                       | BRINGSABOUT
+                       | TRIGGERS
+                       | COMPOSITION
+                       | AGGREGATION
+                       | INHERENCE
+                       | VALUE
+                       | FORMAL
+                       | CONSTITUTION
+  """
+  p[0] = p[1]
+
+
+def p_relation_symbol(p):
+  """
+  relation_symbol : ASSOCIATION
+                   | COMPOSITION_L
+                   | COMPOSITION_R
+                   | COMPOSITION_LO
+                   | COMPOSITION_RO
+  """
+  p[0] = p[1].value
+
+
+def p_relation_declaration_named(p):
+  """
+  relation_declaration : AT relation_stereotype RELATION CLASS_ID opt_cardinality \
+                          relation_symbol RELATION_ID relation_symbol opt_cardinality CLASS_ID
+  """
+  at_token = p[1]
+
+  p[0] = ast_nodes.Relation(
+    line=at_token.line,
+    column=at_token.column,
+    stereotype=p[2].value,
+    source=p[4].value,
+    source_cardinality=p[5],
+    symbol=p[6],
+    name=p[7].value,
+    target_cardinality=p[9],
+    target=p[10].value,
+  )
+
+
+def p_relation_declaration_anonymous(p):
+  """
+  relation_declaration : AT relation_stereotype RELATION CLASS_ID opt_cardinality \
+                          relation_symbol opt_cardinality CLASS_ID
+  """
+  at_token = p[1]
+
+  p[0] = ast_nodes.Relation(
+    line=at_token.line,
+    column=at_token.column,
+    stereotype=p[2].value,
+    source=p[4].value,
+    source_cardinality=p[5],
+    symbol=p[6],
+    name=None,
+    target_cardinality=p[7],
+    target=p[8].value,
+  )
+
+
+def p_relation_end_declaration_named(p):
+  """
+  relation_end_declaration : AT relation_stereotype opt_cardinality relation_symbol \
+                              RELATION_ID relation_symbol opt_cardinality CLASS_ID
+  """
+  at_token = p[1]
+
+  p[0] = ast_nodes.Relation(
+    line=at_token.line,
+    column=at_token.column,
+    stereotype=p[2].value,
+    source=None,
+    source_cardinality=p[3],
+    symbol=p[4],
+    name=p[5].value,
+    target_cardinality=p[7],
+    target=p[8].value,
+  )
+
+
+def p_relation_end_declaration_anonymous(p):
+  """
+  relation_end_declaration : AT relation_stereotype opt_cardinality relation_symbol \
+                              opt_cardinality CLASS_ID
+  """
+  at_token = p[1]
+
+  p[0] = ast_nodes.Relation(
+    line=at_token.line,
+    column=at_token.column,
+    stereotype=p[2].value,
+    source=None,
+    source_cardinality=p[3],
+    symbol=p[4],
+    name=None,
+    target_cardinality=p[5],
+    target=p[6].value,
+  )
