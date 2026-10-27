@@ -71,6 +71,20 @@ class ClassDeclaration(Node):
 
 
 @dataclass(frozen=True)
+class DataTypeDeclaration(Node):
+  """Declaração de tipo de dado derivado (datatype)."""
+
+  name: str
+  attributes: list[Attribute]
+
+  def label(self) -> str:
+    return f"datatype {self.name}"
+
+  def children(self) -> list[Node]:
+    return list(self.attributes)
+
+
+@dataclass(frozen=True)
 class Import(Node):
   """Importação de outro pacote."""
 

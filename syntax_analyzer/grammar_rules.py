@@ -74,8 +74,8 @@ def p_declaration(p):
   """
   declaration : enum_declaration
               | class_declaration
+              | datatype_declaration
   """
-  #            | ..._declaration3
   #            | ..._declaration4
   p[0] = p[1]
 
@@ -251,3 +251,15 @@ def p_modifier(p):
            | REDEFINES
   """
   p[0] = p[1].value
+
+
+# --------------------------------------------------------------------------- #
+# 4. Tipos de dados (datatypes)
+# --------------------------------------------------------------------------- #
+
+
+def p_datatype_declaration(p):
+  "datatype_declaration : DATATYPE CLASS_ID LBRACE attributes_list RBRACE"
+  p[0] = ast_nodes.DataTypeDeclaration(
+    line=p[1].line, column=p[1].column, name=p[2].value, attributes=p[4]
+  )

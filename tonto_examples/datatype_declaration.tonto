@@ -1,0 +1,18 @@
+package DatatypeDeclarationTest
+
+datatype Address {
+    street : string
+    houseNumber : number
+    complement : string
+}
+
+datatype ContactInfo {
+    phone : string
+    address : Address
+}
+
+kind Person {
+    name : string
+    birthDate : date {const}
+    address : Address [1]
+}

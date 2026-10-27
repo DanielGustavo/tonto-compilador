@@ -18,6 +18,7 @@ _SUPPORTED_TOKEN_NAMES = {
   "IMPORT",
   "PACKAGE",
   "ENUM",
+  "DATATYPE",
   # estereótipos de classe
   "KIND",
   "SUBKIND",
@@ -80,10 +81,11 @@ def _suggestion_for_token(token_type: str, lexeme: str) -> str:
 
   if token_type in _RESERVED_TOKEN_NAMES and token_type not in _SUPPORTED_TOKEN_NAMES:
     return (
-      "o analisador sintático atual só reconhece declarações 'enum' e "
+      "o analisador sintático atual só reconhece declarações 'enum', "
       "declarações de classe (estereótipo + nome, com especialização e "
-      "atributos opcionais) dentro de um pacote; relações e genset ainda "
-      "não são suportados por esta gramática."
+      "atributos opcionais) e declarações de 'datatype' (nome + atributos) "
+      "dentro de um pacote; relações e genset ainda não são suportados por "
+      "esta gramática."
     )
 
   return f"verifique a sintaxe perto de '{lexeme}' (token {token_type})."

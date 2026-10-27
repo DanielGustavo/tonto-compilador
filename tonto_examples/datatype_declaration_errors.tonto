@@ -1,0 +1,10 @@
+package DatatypeDeclarationErrorsTest
+
+datatype Endereco {
+    rua string
+    numero : number
+}
+
+datatype Contato {
+    telefone : string
+}
