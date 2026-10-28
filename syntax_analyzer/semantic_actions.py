@@ -16,10 +16,29 @@ class PendingReference:
   line: int
   column: int
   expected: set[SymbolCategory]
-  expected_label: str
 
 
 _pending_references: list[PendingReference] = []
+
+_LABEL_BY_CATEGORY: dict[SymbolCategory, str] = {
+  SymbolCategory.CLASS: "uma classe",
+  SymbolCategory.DATATYPE: "um datatype",
+  SymbolCategory.ENUM: "um enum",
+  SymbolCategory.GENSET: "um genset",
+  SymbolCategory.RELATION: "uma relação",
+  SymbolCategory.ATTRIBUTE: "um atributo",
+  SymbolCategory.LITERAL: "um literal",
+}
+
+
+def _describe_expected(expected: set[SymbolCategory]) -> str:
+  ordered = [category for category in SymbolCategory if category in expected]
+
+  if len(ordered) == 1:
+    return _LABEL_BY_CATEGORY[ordered[0]]
+
+  options = [category.value for category in ordered]
+  return f"um tipo ({', '.join(options[:-1])} ou {options[-1]})"
 
 
 def reset() -> None:
@@ -74,14 +93,13 @@ def recover_to_package_scope() -> None:
   current_table = package_table
 
 
-def resolve_later(token, expected: set[SymbolCategory], expected_label: str) -> None:
+def resolve_later(token, expected: set[SymbolCategory]) -> None:
   _pending_references.append(
     PendingReference(
       name=token.value,
       line=token.line,
       column=token.column,
       expected=expected,
-      expected_label=expected_label,
     )
   )
 
@@ -97,7 +115,10 @@ def finalize() -> list[SemanticError]:
           line=reference.line,
           column=reference.column,
           message=f"'{reference.name}' não foi declarado(a)",
-          suggestion=f"declare {reference.expected_label} '{reference.name}' em algum ponto do pacote.",
+          suggestion=(
+            f"declare {_describe_expected(reference.expected)} '{reference.name}' "
+            "em algum ponto do pacote."
+          ),
         )
       )
     elif symbol.category not in reference.expected:
@@ -108,7 +129,7 @@ def finalize() -> list[SemanticError]:
           column=reference.column,
           message=(
             f"'{reference.name}' é {symbol.category.value}, mas aqui era esperado "
-            f"{reference.expected_label}"
+            f"{_describe_expected(reference.expected)}"
           ),
           suggestion="confira se o nome usado está correto.",
         )

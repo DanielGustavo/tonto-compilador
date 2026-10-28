@@ -216,7 +216,7 @@ def p_opt_specializes(p):
                    | empty
   """
   if len(p) == 3:
-    semantic_actions.resolve_later(p[2], _CLASS_ONLY, "uma classe")
+    semantic_actions.resolve_later(p[2], _CLASS_ONLY)
     p[0] = p[2].value
   else:
     p[0] = None
@@ -299,9 +299,7 @@ def p_type_name(p):
   token = p[1]
 
   if token.token_type == TokenEnum.CLASS_ID:
-    semantic_actions.resolve_later(
-      token, _TYPE_LIKE, "um tipo (classe, datatype ou enum)"
-    )
+    semantic_actions.resolve_later(token, _TYPE_LIKE)
 
   p[0] = token.value
 
@@ -391,7 +389,7 @@ def p_genset_declaration_where(p):
   )
 
   semantic_actions.declare(name, SymbolCategory.GENSET)
-  semantic_actions.resolve_later(general, _CLASS_ONLY, "uma classe")
+  semantic_actions.resolve_later(general, _CLASS_ONLY)
 
   p[0] = node
 
@@ -416,7 +414,7 @@ def p_genset_declaration_block(p):
   )
 
   semantic_actions.declare(name, SymbolCategory.GENSET)
-  semantic_actions.resolve_later(general, _CLASS_ONLY, "uma classe")
+  semantic_actions.resolve_later(general, _CLASS_ONLY)
 
   p[0] = node
 
@@ -450,7 +448,7 @@ def p_class_id_list(p):
                  | class_id_list COMMA CLASS_ID
   """
   token = p[1] if len(p) == 2 else p[3]
-  semantic_actions.resolve_later(token, _CLASS_ONLY, "uma classe")
+  semantic_actions.resolve_later(token, _CLASS_ONLY)
 
   p[0] = [token.value] if len(p) == 2 else [*p[1], token.value]
 
@@ -525,8 +523,8 @@ def p_relation_declaration_named(p):
   )
 
   semantic_actions.declare(name, SymbolCategory.RELATION)
-  semantic_actions.resolve_later(source, _CLASS_ONLY, "uma classe")
-  semantic_actions.resolve_later(target, _CLASS_ONLY, "uma classe")
+  semantic_actions.resolve_later(source, _CLASS_ONLY)
+  semantic_actions.resolve_later(target, _CLASS_ONLY)
 
   p[0] = node
 
@@ -552,8 +550,8 @@ def p_relation_declaration_anonymous(p):
     target=target.value,
   )
 
-  semantic_actions.resolve_later(source, _CLASS_ONLY, "uma classe")
-  semantic_actions.resolve_later(target, _CLASS_ONLY, "uma classe")
+  semantic_actions.resolve_later(source, _CLASS_ONLY)
+  semantic_actions.resolve_later(target, _CLASS_ONLY)
 
   p[0] = node
 
@@ -580,7 +578,7 @@ def p_relation_end_declaration_named(p):
   )
 
   semantic_actions.declare(name, SymbolCategory.RELATION)
-  semantic_actions.resolve_later(target, _CLASS_ONLY, "uma classe")
+  semantic_actions.resolve_later(target, _CLASS_ONLY)
 
   p[0] = node
 
@@ -605,6 +603,6 @@ def p_relation_end_declaration_anonymous(p):
     target=target.value,
   )
 
-  semantic_actions.resolve_later(target, _CLASS_ONLY, "uma classe")
+  semantic_actions.resolve_later(target, _CLASS_ONLY)
 
   p[0] = node
