@@ -1,0 +1,20 @@
+package SemanticErrorsTest
+
+kind Pessoa {
+    nome : string
+    endereco : Endereco
+}
+
+kind Pessoa {
+    idade : number
+}
+
+role Aluno specializes PessoaQueNaoExiste
+
+kind Universidade {
+    @componentOf [1] <>-- [1..*] DepartamentoQueNaoExiste
+}
+
+@mediation relation ContratoQueNaoExiste [1..*] -- Pessoa
+
+genset GrupoInvalido where Pessoa, OutraClasseQueNaoExiste specializes Pessoa

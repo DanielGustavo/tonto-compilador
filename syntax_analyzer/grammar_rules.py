@@ -1,10 +1,15 @@
 from lexico_analyzer import lexer_rules
+from lexico_analyzer.token_types import TokenEnum
 
-from . import ast_nodes
+from . import ast_nodes, semantic_actions
 from .error_handling import p_error
+from .symbol import SymbolCategory
 
 tokens = lexer_rules.tokens
 start = "program"
+
+_CLASS_ONLY = set({SymbolCategory.CLASS})
+_TYPE_LIKE = set({SymbolCategory.CLASS, SymbolCategory.DATATYPE, SymbolCategory.ENUM})
 
 
 def p_empty(p):
@@ -85,6 +90,7 @@ def p_declaration_error(p):
   "declaration : error"
   # Recuperação de erro de nível de pacote
   p.parser.errok()
+  semantic_actions.recover_to_package_scope()
 
 
 # --------------------------------------------------------------------------- #
@@ -93,10 +99,23 @@ def p_declaration_error(p):
 
 
 def p_enum_declaration(p):
-  "enum_declaration : ENUM enum_name LBRACE instances_list RBRACE"
-  p[0] = ast_nodes.Enumeration(
-    line=p[1].line, column=p[1].column, name=p[2].value, literals=p[4]
+  "enum_declaration : ENUM enum_name enter_enum_scope LBRACE instances_list RBRACE"
+  name = p[2]
+
+  node = ast_nodes.Enumeration(
+    line=p[1].line, column=p[1].column, name=name.value, literals=p[5]
   )
+
+  semantic_actions.exit_scope()
+
+  p[0] = node
+
+
+def p_enter_enum_scope(p):
+  "enter_enum_scope :"
+  name = p[-1]  # enum_name
+  semantic_actions.declare(name, SymbolCategory.ENUM)
+  p[0] = semantic_actions.enter_scope(f"enum {name.value}")
 
 
 def p_enum_name(p):
@@ -108,15 +127,29 @@ def p_instances_list(p):
   """
   instances_list : instance_name
                  | instances_list COMMA instance_name
+                 | empty
   """
-  token = p[1] if len(p) == 2 else p[3]
-  literal = ast_nodes.Literal(line=token.line, column=token.column, name=token.value)
+  if len(p) == 2:
+    if p[1] is None:
+      p[0] = []
+      return
+    token = p[1]
+  else:
+    token = p[3]
 
+  literal = ast_nodes.Literal(line=token.line, column=token.column, name=token.value)
   p[0] = [literal] if len(p) == 2 else [*p[1], literal]
+
+
+def p_instances_list_error(p):
+  "instances_list : instances_list error"
+  p.parser.errok()
+  p[0] = p[1]
 
 
 def p_instance_name(p):
   "instance_name : INSTANCE_ID"
+  semantic_actions.declare(p[1], SymbolCategory.LITERAL)
   p[0] = p[1]
 
 
@@ -126,18 +159,29 @@ def p_instance_name(p):
 
 
 def p_class_declaration(p):
-  "class_declaration : class_stereotype CLASS_ID opt_specializes opt_class_body"
+  "class_declaration : class_stereotype CLASS_ID opt_specializes enter_class_scope opt_class_body"
   stereotype = p[1]
   name = p[2]
 
-  p[0] = ast_nodes.ClassDeclaration(
+  node = ast_nodes.ClassDeclaration(
     line=stereotype.line,
     column=stereotype.column,
     stereotype=stereotype.value,
     name=name.value,
     specializes=p[3],
-    members=p[4],
+    members=p[5],
   )
+
+  semantic_actions.exit_scope()
+
+  p[0] = node
+
+
+def p_enter_class_scope(p):
+  "enter_class_scope :"
+  name = p[-2]  # CLASS_ID
+  semantic_actions.declare(name, SymbolCategory.CLASS)
+  p[0] = semantic_actions.enter_scope(f"classe {name.value}")
 
 
 def p_class_stereotype(p):
@@ -171,7 +215,11 @@ def p_opt_specializes(p):
   opt_specializes : SPECIALIZES CLASS_ID
                    | empty
   """
-  p[0] = p[2].value if len(p) == 3 else None
+  if len(p) == 3:
+    semantic_actions.resolve_later(p[2], _CLASS_ONLY, "uma classe")
+    p[0] = p[2].value
+  else:
+    p[0] = None
 
 
 def p_opt_class_body(p):
@@ -224,7 +272,7 @@ def p_attribute_declaration(p):
   "attribute_declaration : RELATION_ID COLON type_name opt_cardinality opt_modifiers"
   name = p[1]
 
-  p[0] = ast_nodes.Attribute(
+  node = ast_nodes.Attribute(
     line=name.line,
     column=name.column,
     name=name.value,
@@ -232,6 +280,10 @@ def p_attribute_declaration(p):
     cardinality=p[4],
     modifiers=p[5],
   )
+
+  semantic_actions.declare(name, SymbolCategory.ATTRIBUTE)
+
+  p[0] = node
 
 
 def p_type_name(p):
@@ -244,7 +296,14 @@ def p_type_name(p):
             | DATETIME
             | CLASS_ID
   """
-  p[0] = p[1].value
+  token = p[1]
+
+  if token.token_type == TokenEnum.CLASS_ID:
+    semantic_actions.resolve_later(
+      token, _TYPE_LIKE, "um tipo (classe, datatype ou enum)"
+    )
+
+  p[0] = token.value
 
 
 def p_opt_cardinality(p):
@@ -288,10 +347,23 @@ def p_modifier(p):
 
 
 def p_datatype_declaration(p):
-  "datatype_declaration : DATATYPE CLASS_ID LBRACE attributes_list RBRACE"
-  p[0] = ast_nodes.DataTypeDeclaration(
-    line=p[1].line, column=p[1].column, name=p[2].value, attributes=p[4]
+  "datatype_declaration : DATATYPE CLASS_ID enter_datatype_scope LBRACE attributes_list RBRACE"
+  name = p[2]
+
+  node = ast_nodes.DataTypeDeclaration(
+    line=p[1].line, column=p[1].column, name=name.value, attributes=p[5]
   )
+
+  semantic_actions.exit_scope()
+
+  p[0] = node
+
+
+def p_enter_datatype_scope(p):
+  "enter_datatype_scope :"
+  name = p[-1]  # CLASS_ID
+  semantic_actions.declare(name, SymbolCategory.DATATYPE)
+  p[0] = semantic_actions.enter_scope(f"datatype {name.value}")
 
 
 # --------------------------------------------------------------------------- #
@@ -305,16 +377,23 @@ def p_genset_declaration_where(p):
                         WHERE class_id_list SPECIALIZES CLASS_ID
   """
   genset_token = p[3]
+  name = p[4]
+  general = p[8]
 
-  p[0] = ast_nodes.GeneralizationSet(
+  node = ast_nodes.GeneralizationSet(
     line=genset_token.line,
     column=genset_token.column,
-    name=p[4].value,
-    general=p[8].value,
+    name=name.value,
+    general=general.value,
     specifics=p[6],
     disjointness=p[1],
     completeness=p[2],
   )
+
+  semantic_actions.declare(name, SymbolCategory.GENSET)
+  semantic_actions.resolve_later(general, _CLASS_ONLY, "uma classe")
+
+  p[0] = node
 
 
 def p_genset_declaration_block(p):
@@ -323,16 +402,23 @@ def p_genset_declaration_block(p):
                         LBRACE GENERAL CLASS_ID SPECIFICS class_id_list RBRACE
   """
   genset_token = p[3]
+  name = p[4]
+  general = p[7]
 
-  p[0] = ast_nodes.GeneralizationSet(
+  node = ast_nodes.GeneralizationSet(
     line=genset_token.line,
     column=genset_token.column,
-    name=p[4].value,
-    general=p[7].value,
+    name=name.value,
+    general=general.value,
     specifics=p[9],
     disjointness=p[1],
     completeness=p[2],
   )
+
+  semantic_actions.declare(name, SymbolCategory.GENSET)
+  semantic_actions.resolve_later(general, _CLASS_ONLY, "uma classe")
+
+  p[0] = node
 
 
 def p_genset_name(p):
@@ -364,6 +450,7 @@ def p_class_id_list(p):
                  | class_id_list COMMA CLASS_ID
   """
   token = p[1] if len(p) == 2 else p[3]
+  semantic_actions.resolve_later(token, _CLASS_ONLY, "uma classe")
 
   p[0] = [token.value] if len(p) == 2 else [*p[1], token.value]
 
@@ -421,18 +508,27 @@ def p_relation_declaration_named(p):
                           relation_symbol RELATION_ID relation_symbol opt_cardinality CLASS_ID
   """
   at_token = p[1]
+  source = p[4]
+  name = p[7]
+  target = p[10]
 
-  p[0] = ast_nodes.Relation(
+  node = ast_nodes.Relation(
     line=at_token.line,
     column=at_token.column,
     stereotype=p[2].value,
-    source=p[4].value,
+    source=source.value,
     source_cardinality=p[5],
     symbol=p[6],
-    name=p[7].value,
+    name=name.value,
     target_cardinality=p[9],
-    target=p[10].value,
+    target=target.value,
   )
+
+  semantic_actions.declare(name, SymbolCategory.RELATION)
+  semantic_actions.resolve_later(source, _CLASS_ONLY, "uma classe")
+  semantic_actions.resolve_later(target, _CLASS_ONLY, "uma classe")
+
+  p[0] = node
 
 
 def p_relation_declaration_anonymous(p):
@@ -441,18 +537,25 @@ def p_relation_declaration_anonymous(p):
                           relation_symbol opt_cardinality CLASS_ID
   """
   at_token = p[1]
+  source = p[4]
+  target = p[8]
 
-  p[0] = ast_nodes.Relation(
+  node = ast_nodes.Relation(
     line=at_token.line,
     column=at_token.column,
     stereotype=p[2].value,
-    source=p[4].value,
+    source=source.value,
     source_cardinality=p[5],
     symbol=p[6],
     name=None,
     target_cardinality=p[7],
-    target=p[8].value,
+    target=target.value,
   )
+
+  semantic_actions.resolve_later(source, _CLASS_ONLY, "uma classe")
+  semantic_actions.resolve_later(target, _CLASS_ONLY, "uma classe")
+
+  p[0] = node
 
 
 def p_relation_end_declaration_named(p):
@@ -461,18 +564,25 @@ def p_relation_end_declaration_named(p):
                               RELATION_ID relation_symbol opt_cardinality CLASS_ID
   """
   at_token = p[1]
+  name = p[5]
+  target = p[8]
 
-  p[0] = ast_nodes.Relation(
+  node = ast_nodes.Relation(
     line=at_token.line,
     column=at_token.column,
     stereotype=p[2].value,
     source=None,
     source_cardinality=p[3],
     symbol=p[4],
-    name=p[5].value,
+    name=name.value,
     target_cardinality=p[7],
-    target=p[8].value,
+    target=target.value,
   )
+
+  semantic_actions.declare(name, SymbolCategory.RELATION)
+  semantic_actions.resolve_later(target, _CLASS_ONLY, "uma classe")
+
+  p[0] = node
 
 
 def p_relation_end_declaration_anonymous(p):
@@ -481,8 +591,9 @@ def p_relation_end_declaration_anonymous(p):
                               opt_cardinality CLASS_ID
   """
   at_token = p[1]
+  target = p[6]
 
-  p[0] = ast_nodes.Relation(
+  node = ast_nodes.Relation(
     line=at_token.line,
     column=at_token.column,
     stereotype=p[2].value,
@@ -491,5 +602,9 @@ def p_relation_end_declaration_anonymous(p):
     symbol=p[4],
     name=None,
     target_cardinality=p[5],
-    target=p[6].value,
+    target=target.value,
   )
+
+  semantic_actions.resolve_later(target, _CLASS_ONLY, "uma classe")
+
+  p[0] = node

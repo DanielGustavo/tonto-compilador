@@ -10,3 +10,12 @@ class SyntacticError:
   column: int
   message: str
   suggestion: str
+
+
+@dataclass(frozen=True)
+class SemanticError:
+  value: str
+  line: int
+  column: int
+  message: str
+  suggestion: str

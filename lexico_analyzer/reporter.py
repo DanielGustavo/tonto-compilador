@@ -8,6 +8,8 @@ JSON, CSV) mexe só neste arquivo.
 import json
 from pathlib import Path
 
+from table_printer import format_table
+
 from .errors import LexicalError
 from .token_types import CustomToken, TokenEnum
 
@@ -69,25 +71,8 @@ def _print_token_table(tokens: list[CustomToken]) -> None:
     for token in tokens
   ]
 
-  column_widths = [
-    max(len(header[i]), *(len(row[i]) for row in table_rows)) for i in range(4)
-  ]
-
-  def format_border(left: str, middle: str, right: str) -> str:
-    return left + middle.join("─" * (width + 2) for width in column_widths) + right
-
-  def format_row(row: tuple[str, ...]) -> str:
-    cells = (f" {value.ljust(width)} " for value, width in zip(row, column_widths))
-    return "│" + "│".join(cells) + "│"
-
-  print(format_border("┌", "┬", "┐"))
-  print(format_row(header))
-  print(format_border("├", "┼", "┤"))
-
-  for row in table_rows:
-    print(format_row(row))
-
-  print(format_border("└", "┴", "┘"))
+  for line in format_table(header, table_rows):
+    print(line)
 
 
 def imprimir_erros(erros: list[LexicalError]) -> None:
