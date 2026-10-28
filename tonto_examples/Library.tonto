@@ -1,0 +1,11 @@
+import Catalog
+
+package Library
+
+kind Book {
+    title: string
+    isbn: string
+    genre: Genre
+}
+
+kind Author

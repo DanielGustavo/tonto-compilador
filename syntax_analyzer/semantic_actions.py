@@ -50,6 +50,28 @@ def reset() -> None:
   _pending_references.clear()
 
 
+def snapshot() -> dict:
+  return {
+    "package_table": package_table,
+    "current_table": current_table,
+    "semantic_errors": list(semantic_errors),
+    "pending_references": list(_pending_references),
+  }
+
+
+def restore(snap: dict) -> None:
+  global package_table, current_table
+
+  package_table = snap["package_table"]
+  current_table = snap["current_table"]
+
+  semantic_errors.clear()
+  semantic_errors.extend(snap["semantic_errors"])
+
+  _pending_references.clear()
+  _pending_references.extend(snap["pending_references"])
+
+
 def declare(token, category: SymbolCategory) -> Symbol:
   symbol = Symbol(
     name=token.value, category=category, line=token.line, column=token.column
@@ -71,6 +93,51 @@ def declare(token, category: SymbolCategory) -> Symbol:
     )
 
   return symbol
+
+
+def declare_imported(
+  name: str, category: SymbolCategory, line: int, column: int, package_name: str
+) -> None:
+  symbol = Symbol(
+    name=name, category=category, line=line, column=column, source=package_name
+  )
+
+  if not package_table.put(symbol):
+    original = package_table.get_local(name)
+    origin = (
+      f"no pacote importado '{original.source}'"
+      if original is not None and original.source
+      else "neste pacote"
+    )
+
+    semantic_errors.append(
+      SemanticError(
+        value=name,
+        line=line,
+        column=column,
+        message=(
+          f"{category.value} '{name}' do pacote importado '{package_name}' "
+          f"conflita com um símbolo já declarado {origin} "
+          f"(linha {original.line if original else '?'})"
+        ),
+        suggestion="renomeie um dos dois símbolos ou remova o import duplicado.",
+      )
+    )
+
+
+def report_unresolved_import(name: str, line: int, column: int) -> None:
+  semantic_errors.append(
+    SemanticError(
+      value=name,
+      line=line,
+      column=column,
+      message=f"pacote importado '{name}' não foi encontrado",
+      suggestion=(
+        f"verifique se existe um arquivo '{name}.tonto' com 'package {name}' "
+        "no mesmo diretório."
+      ),
+    )
+  )
 
 
 def enter_scope(scope_name: str) -> SymbolTable:

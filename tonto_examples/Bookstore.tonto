@@ -1,0 +1,15 @@
+import Library
+
+package Bookstore
+
+kind Store {
+    name: string
+}
+
+@mediation relation Store [1] -- [1..*] Book
+
+relator Purchase {
+    @mediation [1..*] -- [1] Store
+    @mediation [1..*] -- [1] Book
+    @mediation [1..*] -- [1] Author
+}

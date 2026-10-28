@@ -18,3 +18,4 @@ class Symbol:
   category: SymbolCategory
   line: int
   column: int
+  source: str | None = None

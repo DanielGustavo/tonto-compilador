@@ -24,6 +24,7 @@ from lexico_analyzer.reporter import (
   imprimir_visao_analitica,
   print_token_count,
 )
+from syntax_analyzer import ast_nodes
 from syntax_analyzer.parser import analisar_arquivo as analisar_sintaticamente
 from syntax_analyzer.reporter import (
   print_semantic_errors,
@@ -115,9 +116,14 @@ def executar_analise_lexica(caminho: Path) -> None:
 def executar_analise_sintatica(caminho: Path) -> None:
   print("\n============ ANÁLISE SINTÁTICA ============")
 
-  node, erros_lexicos, erros_sintaticos, erros_semanticos, _codigo_fonte = (
-    analisar_sintaticamente(caminho)
-  )
+  (
+    node,
+    erros_lexicos,
+    erros_sintaticos,
+    erros_semanticos,
+    declaracoes_importadas,
+    _codigo_fonte,
+  ) = analisar_sintaticamente(caminho)
 
   def print_node(node, ident=0):
     print(f"{' ' * ident * 4}{node.label()}")
@@ -132,8 +138,8 @@ def executar_analise_sintatica(caminho: Path) -> None:
   imprimir_erros(erros_lexicos)
   print_syntax_errors(erros_sintaticos)
 
-  if node and node.package:
-    print_tabela_sintese(node.package)
+  if isinstance(node, ast_nodes.Program) and node.package:
+    print_tabela_sintese(node.package, declaracoes_importadas)
 
   print_semantic_errors(erros_semanticos)
 

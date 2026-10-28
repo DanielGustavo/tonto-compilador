@@ -1,7 +1,11 @@
+from typing import TypeVar
+
 from table_printer import print_table
 
 from . import ast_nodes
 from .errors import SemanticError, SyntacticError
+
+_NodeT = TypeVar("_NodeT", bound=ast_nodes.Node)
 
 
 def print_syntax_errors(errors: list[SyntacticError]) -> None:
@@ -28,17 +32,26 @@ def print_semantic_errors(errors: list[SemanticError]) -> None:
     print(f"    sugestão: {error.suggestion}")
 
 
-def print_tabela_sintese(package: ast_nodes.Package) -> None:
-  classes = [
-    d for d in package.declarations if isinstance(d, ast_nodes.ClassDeclaration)
-  ]
-  datatypes = [
-    d for d in package.declarations if isinstance(d, ast_nodes.DataTypeDeclaration)
-  ]
-  enums = [d for d in package.declarations if isinstance(d, ast_nodes.Enumeration)]
-  gensets = [
-    d for d in package.declarations if isinstance(d, ast_nodes.GeneralizationSet)
-  ]
+def print_tabela_sintese(
+  package: ast_nodes.Package,
+  imported: list[tuple[ast_nodes.Node, str]] | None = None,
+) -> None:
+  imported = imported or []
+
+  def own(declaration_type: type[_NodeT]) -> list[tuple[_NodeT, str]]:
+    return [
+      (d, "-") for d in package.declarations if isinstance(d, declaration_type)
+    ]
+
+  def merged(declaration_type: type[_NodeT]) -> list[tuple[_NodeT, str]]:
+    return own(declaration_type) + [
+      (d, origin) for d, origin in imported if isinstance(d, declaration_type)
+    ]
+
+  classes = merged(ast_nodes.ClassDeclaration)
+  datatypes = merged(ast_nodes.DataTypeDeclaration)
+  enums = merged(ast_nodes.Enumeration)
+  gensets = merged(ast_nodes.GeneralizationSet)
   external_relations = [
     d for d in package.declarations if isinstance(d, ast_nodes.Relation)
   ]
@@ -56,7 +69,14 @@ def print_tabela_sintese(package: ast_nodes.Package) -> None:
 
   print_table(
     "Classes",
-    ("Nome", "Estereótipo", "Especializa", "Atributos", "Relações internas"),
+    (
+      "Nome",
+      "Estereótipo",
+      "Especializa",
+      "Atributos",
+      "Relações internas",
+      "Pacote de origem",
+    ),
     [
       (
         node.name,
@@ -64,29 +84,30 @@ def print_tabela_sintese(package: ast_nodes.Package) -> None:
         node.specializes or "-",
         str(count_members(node, ast_nodes.Attribute)),
         str(count_members(node, ast_nodes.Relation)),
+        origem,
       )
-      for node in classes
+      for node, origem in classes
     ],
     indent="  ",
   )
 
   print_table(
     "Datatypes",
-    ("Nome", "Atributos"),
-    [(node.name, str(len(node.attributes))) for node in datatypes],
+    ("Nome", "Atributos", "Pacote de origem"),
+    [(node.name, str(len(node.attributes)), origem) for node, origem in datatypes],
     indent="  ",
   )
 
   print_table(
     "Enums",
-    ("Nome", "Literais"),
-    [(node.name, str(len(node.literals))) for node in enums],
+    ("Nome", "Literais", "Pacote de origem"),
+    [(node.name, str(len(node.literals)), origem) for node, origem in enums],
     indent="  ",
   )
 
   print_table(
     "Gensets",
-    ("Nome", "Geral", "Específicas", "Disjunção", "Completude"),
+    ("Nome", "Geral", "Específicas", "Disjunção", "Completude", "Pacote de origem"),
     [
       (
         node.name,
@@ -94,8 +115,9 @@ def print_tabela_sintese(package: ast_nodes.Package) -> None:
         ", ".join(node.specifics),
         node.disjointness or "-",
         node.completeness or "-",
+        origem,
       )
-      for node in gensets
+      for node, origem in gensets
     ],
     indent="  ",
   )
