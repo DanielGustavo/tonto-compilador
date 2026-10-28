@@ -39,9 +39,7 @@ def print_tabela_sintese(
   imported = imported or []
 
   def own(declaration_type: type[_NodeT]) -> list[tuple[_NodeT, str]]:
-    return [
-      (d, "-") for d in package.declarations if isinstance(d, declaration_type)
-    ]
+    return [(d, "-") for d in package.declarations if isinstance(d, declaration_type)]
 
   def merged(declaration_type: type[_NodeT]) -> list[tuple[_NodeT, str]]:
     return own(declaration_type) + [
@@ -67,6 +65,44 @@ def print_tabela_sintese(
   def count_members(node: ast_nodes.ClassDeclaration, member_type: type) -> int:
     return sum(1 for member in node.members if isinstance(member, member_type))
 
+  pacotes: dict[str, dict[str, int]] = {package.name: {}}
+
+  def increment_declaration(nome: str, chave: str) -> None:
+    pacotes.setdefault(nome, {})
+    pacotes[nome][chave] = pacotes[nome].get(chave, 0) + 1
+
+  for declaracao in package.declarations:
+    if isinstance(declaracao, ast_nodes.ClassDeclaration):
+      increment_declaration(package.name, "Classes")
+    elif isinstance(declaracao, ast_nodes.DataTypeDeclaration):
+      increment_declaration(package.name, "Datatypes")
+    elif isinstance(declaracao, ast_nodes.Enumeration):
+      increment_declaration(package.name, "Enums")
+    elif isinstance(declaracao, ast_nodes.GeneralizationSet):
+      increment_declaration(package.name, "Gensets")
+
+  for declaracao, origem in imported:
+    if isinstance(declaracao, ast_nodes.ClassDeclaration):
+      increment_declaration(origem, "Classes")
+    elif isinstance(declaracao, ast_nodes.DataTypeDeclaration):
+      increment_declaration(origem, "Datatypes")
+    elif isinstance(declaracao, ast_nodes.Enumeration):
+      increment_declaration(origem, "Enums")
+    elif isinstance(declaracao, ast_nodes.GeneralizationSet):
+      increment_declaration(origem, "Gensets")
+
+  colunas_pacote = ("Classes", "Datatypes", "Enums", "Gensets")
+
+  print_table(
+    "Pacotes",
+    ("Nome", *colunas_pacote),
+    [
+      (nome, *(str(contagens.get(coluna, 0)) for coluna in colunas_pacote))
+      for nome, contagens in pacotes.items()
+    ],
+    indent="  ",
+  )
+
   print_table(
     "Classes",
     (
@@ -87,6 +123,39 @@ def print_tabela_sintese(
         origem,
       )
       for node, origem in classes
+    ],
+    indent="  ",
+  )
+
+  internal_relations = [
+    (node.name, member, origem)
+    for node, origem in classes
+    for member in node.members
+    if isinstance(member, ast_nodes.Relation)
+  ]
+
+  print_table(
+    "Relações internas",
+    (
+      "Classe",
+      "Estereótipo",
+      "Nome",
+      "Destino",
+      "Cardinalidade origem",
+      "Cardinalidade destino",
+      "Pacote de origem",
+    ),
+    [
+      (
+        classe,
+        relacao.stereotype,
+        relacao.name or "(anônima)",
+        relacao.target,
+        relacao.source_cardinality or "-",
+        relacao.target_cardinality or "-",
+        origem,
+      )
+      for classe, relacao, origem in internal_relations
     ],
     indent="  ",
   )

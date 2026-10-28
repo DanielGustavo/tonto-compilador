@@ -114,8 +114,6 @@ def executar_analise_lexica(caminho: Path) -> None:
 
 
 def executar_analise_sintatica(caminho: Path) -> None:
-  print("\n============ ANÁLISE SINTÁTICA ============")
-
   (
     node,
     erros_lexicos,
@@ -124,16 +122,6 @@ def executar_analise_sintatica(caminho: Path) -> None:
     declaracoes_importadas,
     _codigo_fonte,
   ) = analisar_sintaticamente(caminho)
-
-  def print_node(node, ident=0):
-    print(f"{' ' * ident * 4}{node.label()}")
-
-    if node.children:
-      for childrenNode in node.children():
-        print_node(childrenNode, ident + 1)
-
-  if node:
-    print_node(node)
 
   imprimir_erros(erros_lexicos)
   print_syntax_errors(erros_sintaticos)
