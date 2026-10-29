@@ -99,7 +99,7 @@ def escolher_arquivo(argumentos: list[str]) -> Path | None:
   return caminho
 
 
-def executar_analise_lexica(caminho: Path) -> None:
+def executar_analise_lexica(caminho: Path) -> list:
   print("\n============ ANÁLISE LÉXICA ============")
 
   tokens, erros, codigo_fonte = analisar_lexicamente(caminho)
@@ -110,10 +110,10 @@ def executar_analise_lexica(caminho: Path) -> None:
   print_token_count(count)
   export_tokens_json(caminho, tokens, count)
 
-  imprimir_erros(erros)
+  return erros
 
 
-def executar_analise_sintatica(caminho: Path) -> None:
+def executar_analise_sintatica(caminho: Path) -> tuple[list, list, list]:
   (
     node,
     erros_lexicos,
@@ -123,13 +123,10 @@ def executar_analise_sintatica(caminho: Path) -> None:
     _codigo_fonte,
   ) = analisar_sintaticamente(caminho)
 
-  imprimir_erros(erros_lexicos)
-  print_syntax_errors(erros_sintaticos)
-
   if isinstance(node, ast_nodes.Program) and node.package:
     print_tabela_sintese(node.package, declaracoes_importadas)
 
-  print_semantic_errors(erros_semanticos)
+  return erros_lexicos, erros_sintaticos, erros_semanticos
 
 
 def main() -> None:
@@ -143,10 +140,23 @@ def main() -> None:
 
   print(f"\n>>> Analisando: {caminho.name}")
 
+  erros_lexicos = []
+  erros_sintaticos = []
+  erros_semanticos = []
+  rodou_sintatica = False
+
   if "lexic" in modo:
-    executar_analise_lexica(caminho)
+    erros_lexicos = executar_analise_lexica(caminho)
   if "syntax" in modo:
-    executar_analise_sintatica(caminho)
+    erros_lexicos, erros_sintaticos, erros_semanticos = executar_analise_sintatica(
+      caminho
+    )
+    rodou_sintatica = True
+
+  imprimir_erros(erros_lexicos)
+  if rodou_sintatica:
+    print_syntax_errors(erros_sintaticos)
+    print_semantic_errors(erros_semanticos)
 
 
 if __name__ == "__main__":
