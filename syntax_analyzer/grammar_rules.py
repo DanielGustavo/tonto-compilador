@@ -49,7 +49,10 @@ def p_import(p):
 
 
 def p_package_name(p):
-  "package_name : CLASS_ID"
+  """
+  package_name : CLASS_ID
+               | RELATION_ID
+  """
   p[0] = p[1]
 
 
@@ -212,14 +215,10 @@ def p_class_stereotype(p):
 
 def p_opt_specializes(p):
   """
-  opt_specializes : SPECIALIZES CLASS_ID
+  opt_specializes : SPECIALIZES class_id_list
                    | empty
   """
-  if len(p) == 3:
-    semantic_actions.resolve_later(p[2], _CLASS_ONLY)
-    p[0] = p[2].value
-  else:
-    p[0] = None
+  p[0] = p[2] if len(p) == 3 else []
 
 
 def p_opt_class_body(p):

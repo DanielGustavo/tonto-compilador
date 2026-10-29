@@ -59,11 +59,11 @@ class ClassDeclaration(Node):
 
   stereotype: str
   name: str
-  specializes: str | None
+  specializes: list[str]
   members: list[Node]
 
   def label(self) -> str:
-    suffix = f" specializes {self.specializes}" if self.specializes else ""
+    suffix = f" specializes {', '.join(self.specializes)}" if self.specializes else ""
     return f"<<{self.stereotype}>> {self.name}{suffix}"
 
   def children(self) -> list[Node]:

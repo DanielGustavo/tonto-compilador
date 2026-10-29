@@ -23,6 +23,8 @@ parser = yacc.yacc(
   outputdir=str(Path(__file__).parent),
 )
 
+error_handling.parser_ref = parser
+
 _PACKAGE_NAME_RE = re.compile(r"^\s*package\s+([A-Z][a-zA-Z_]*)", re.MULTILINE)
 
 
@@ -42,6 +44,11 @@ def _parse_file_isolated(caminho: Path) -> ast_nodes.Program | None:
   snap = semantic_actions.snapshot()
   semantic_actions.reset()
 
+  erros_lexicos_originais = list(lexer_rules.erros_lexicos)
+  erros_sintaticos_originais = list(error_handling.syntax_errors)
+  lexer_rules.erros_lexicos.clear()
+  error_handling.syntax_errors.clear()
+
   try:
     codigo_fonte = caminho.read_text(encoding="utf-8")
     lexer.lineno = 1
@@ -49,6 +56,10 @@ def _parse_file_isolated(caminho: Path) -> ast_nodes.Program | None:
     return arvore if isinstance(arvore, ast_nodes.Program) else None
   finally:
     semantic_actions.restore(snap)
+    lexer_rules.erros_lexicos.clear()
+    lexer_rules.erros_lexicos.extend(erros_lexicos_originais)
+    error_handling.syntax_errors.clear()
+    error_handling.syntax_errors.extend(erros_sintaticos_originais)
 
 
 def _resolve_imports(

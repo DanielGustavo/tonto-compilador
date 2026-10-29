@@ -117,7 +117,7 @@ def print_tabela_sintese(
       (
         node.name,
         node.stereotype,
-        node.specializes or "-",
+        ", ".join(node.specializes) if node.specializes else "-",
         str(count_members(node, ast_nodes.Attribute)),
         str(count_members(node, ast_nodes.Relation)),
         origem,
