@@ -1,3 +1,10 @@
+"""Gramática PLY/YACC da linguagem TONTO.
+
+Cada regra `p_*` monta um nó de `ast_nodes` e, quando a
+construção declara ou usa um nome, chama `semantic_actions` para
+atualizar/consultar a tabela de símbolos durante o próprio parse.
+"""
+
 from lexico_analyzer import lexer_rules
 from lexico_analyzer.token_definitions import token_names_by_category
 from lexico_analyzer.token_types import TokenEnum
@@ -126,6 +133,12 @@ def p_enum_declaration(p):
 
 def p_enter_enum_scope(p):
   "enter_enum_scope :"
+  # Regra vazia ("marcadora"): o PLY a reduz no meio de `enum_declaration`,
+  # antes de `LBRACE instances_list RBRACE` ser lido, só para declarar o
+  # enum e abrir seu escopo com antecedência, permitindo que os membros do
+  # corpo já sejam resolvidos no escopo certo. `p[-1]` busca o símbolo
+  # já reduzido na pilha (`enum_name`)
+
   name = p[-1]  # enum_name
   semantic_actions.declare(name, SymbolCategory.ENUM)
   p[0] = semantic_actions.enter_scope(f"enum {name.value}")
@@ -192,6 +205,7 @@ def p_class_declaration(p):
 
 def p_enter_class_scope(p):
   "enter_class_scope :"
+  # Mesma técnica de regra-marcadora de `p_enter_enum_scope`.
   name = p[-2]  # CLASS_ID
   semantic_actions.declare(name, SymbolCategory.CLASS)
   p[0] = semantic_actions.enter_scope(f"classe {name.value}")
@@ -345,6 +359,7 @@ def p_datatype_declaration(p):
 
 def p_enter_datatype_scope(p):
   "enter_datatype_scope :"
+  # Mesma técnica de regra-marcadora de `p_enter_enum_scope`.
   name = p[-1]  # CLASS_ID
   semantic_actions.declare(name, SymbolCategory.DATATYPE)
   p[0] = semantic_actions.enter_scope(f"datatype {name.value}")

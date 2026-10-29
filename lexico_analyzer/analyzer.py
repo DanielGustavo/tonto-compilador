@@ -1,8 +1,10 @@
 """Fachada do analisador léxico.
 
-É o único módulo que o `main.py` precisa conhecer para tokenizar um arquivo:
-constrói o lexer do PLY a partir de `lexer_rules` e devolve a lista de
-`CustomToken` encontrados, junto com os erros léxicos do caminho.
+Constrói o lexer do PLY a partir de `lexer_rules` e devolve a lista de
+`CustomToken` encontrados, junto com os erros léxicos do caminho. É o módulo
+que roda a tokenização; a apresentação do resultado (tabelas, contagem,
+exportação JSON) é responsabilidade separada de `reporter.py`, importado
+diretamente pelo `main.py` quando precisa dessas funções.
 """
 
 from pathlib import Path

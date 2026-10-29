@@ -1,3 +1,12 @@
+"""Apresentação dos resultados da Análise Sintática/Semântica.
+
+Paralelo a `lexico_analyzer/reporter.py`: imprime as listas de erro
+sintático e semântico, e `print_tabela_sintese`, que mescla as declarações
+do próprio pacote com as trazidas por imports resolvidos (ver
+`parser.py::_resolve_imports`) e desenha as sub-tabelas da "tabela de
+síntese" via o `table_printer` compartilhado.
+"""
+
 from typing import TypeVar
 
 from table_printer import print_table

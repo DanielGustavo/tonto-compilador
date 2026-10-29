@@ -1,3 +1,12 @@
+"""Tratamento de erro sintático do parser PLY.
+
+Expõe o hook `p_error(p)` chamado pelo PLY sempre que a gramática não
+consegue reduzir o token atual, além de um conjunto de regras
+que inspecionam a pilha de símbolos do parser (`symstack`) para sugerir a
+causa mais provável do erro, registrando o resultado em `syntax_errors`,
+consumido por `syntax_analyzer/reporter.py`.
+"""
+
 from lexico_analyzer.token_definitions import reserved_words, token_names_by_category
 from lexico_analyzer.token_types import TokenEnum
 

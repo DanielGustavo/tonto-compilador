@@ -1,3 +1,13 @@
+"""Monta o parser PLY e resolve imports entre arquivos `.tonto`.
+
+Constrói o parser a partir de `grammar_rules` (`yacc.yacc`), liga
+`error_handling` a ele, e implementa a parte mais particular deste
+compilador: a resolução de `import <Nome>` contra outros arquivos `.tonto`
+do mesmo diretório, sem estrutura de pastas, só casando o nome importado
+com o cabeçalho `package <Nome>` de um arquivo vizinho. Expõe `analisar_codigo`
+e `analisar_arquivo` como pontos de entrada públicos.
+"""
+
 import re
 from pathlib import Path
 
@@ -41,6 +51,10 @@ def _index_packages_by_name(base_dir: Path) -> dict[str, Path]:
 
 
 def _parse_file_isolated(caminho: Path) -> ast_nodes.Program | None:
+  # Faz o parse do arquivo importado com tabelas de símbolo e listas de erro
+  # próprias (zeradas por `reset()`/`clear()`), e sempre restaura o estado do
+  # arquivo principal no `finally`, assim a análise do import não contamina
+  # a tabela de símbolos nem os erros do arquivo que está sendo analisado.
   snap = semantic_actions.snapshot()
   semantic_actions.reset()
 
@@ -73,6 +87,10 @@ def _resolve_imports(
   pacote_atual = programa.package.name if programa.package else None
   indice = _index_packages_by_name(base_dir)
 
+  # Busca em grafo sobre os imports: cada pacote resolvido também pode
+  # importar outros, então os imports do arquivo importado são enfileirados
+  # de volta (`fila.extend(...)` mais abaixo). `visitados` evita reprocessar
+  # o mesmo pacote em caso de import cíclico ou duplicado.
   visitados: set[str] = {pacote_atual} if pacote_atual else set()
   fila: list[ast_nodes.Import] = list(programa.imports)
 

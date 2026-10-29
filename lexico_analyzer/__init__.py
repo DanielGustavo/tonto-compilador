@@ -8,7 +8,11 @@ Organização didática do pacote (na ordem em que as peças são usadas):
 4. `analyzer`          -> fachada que roda a análise sobre um arquivo .tonto;
 5. `reporter`          -> como o resultado é apresentado ao usuário.
 
-O `main.py` (na raiz do projeto) só conversa com `analyzer` e `reporter`.
+O `main.py` (na raiz do projeto) usa a fachada deste pacote, mas importa
+diretamente de `analyzer` e, principalmente, de `reporter` — este último
+expõe várias funções de apresentação além de `imprimir_visao_analitica`
+(contagem de tokens por categoria, exportação para JSON, impressão de
+erros), por isso não está toda reexportada aqui.
 """
 
 from .analyzer import analisar_arquivo, analisar_codigo

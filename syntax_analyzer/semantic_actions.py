@@ -1,3 +1,12 @@
+"""Motor da Análise Semântica.
+
+É o módulo que as ações de `grammar_rules.py` chamam durante o parse para
+declarar símbolos, entrar/sair de escopos e verificar nomes usados, mantém
+a tabela de símbolos "viva" enquanto a árvore sintática é construída, e só
+devolve a lista final de `SemanticError` quando `finalize()` roda, ao fim do
+parse (depois que todo o pacote e seus imports já foram vistos).
+"""
+
 from dataclasses import dataclass
 
 from .errors import SemanticError
@@ -50,6 +59,11 @@ def reset() -> None:
   _pending_references.clear()
 
 
+# `parser.py` usa snapshot/restore para analisar um arquivo importado
+# isoladamente: salva o estado atual, roda `reset()` + o parse do import, lê
+# o que precisa dali, e restaura o estado salvo. Assim a tabela de símbolos
+# e os erros do arquivo importado nunca substituem os do arquivo principal
+# que ainda está sendo analisado.
 def snapshot() -> dict:
   return {
     "package_table": package_table,

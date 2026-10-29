@@ -1,3 +1,11 @@
+"""Nós da AST produzida pelo Analisador Sintático.
+
+Um `Node(line, column)` base e um dataclass por construção da linguagem
+TONTO (classes, relações, datatypes, enums, gensets, pacotes e imports),
+montados pelas regras de `grammar_rules.py` e consumidos pelas ações
+semânticas e pelos reporters.
+"""
+
 from dataclasses import dataclass
 
 
