@@ -93,6 +93,11 @@ reserved_words = {
   "collectives": ("COLLECTIVES", TokenEnum.KEYWORDS),
 }
 
+
+def token_names_by_category(category: TokenEnum) -> list[str]:
+  return [name for name, cat in reserved_words.values() if cat == category]
+
+
 token_definitions = {
   TokenEnum.NEW_TYPE: r"[a-zA-Z]+DataType",
   TokenEnum.FUNCTIONAL_COMPLEXES: r"functional-complexes",

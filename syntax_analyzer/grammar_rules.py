@@ -1,4 +1,5 @@
 from lexico_analyzer import lexer_rules
+from lexico_analyzer.token_definitions import token_names_by_category
 from lexico_analyzer.token_types import TokenEnum
 
 from . import ast_nodes, semantic_actions
@@ -10,6 +11,15 @@ start = "program"
 
 _CLASS_ONLY = set({SymbolCategory.CLASS})
 _TYPE_LIKE = set({SymbolCategory.CLASS, SymbolCategory.DATATYPE, SymbolCategory.ENUM})
+
+
+def _alternatives_doc(rule_name: str, token_names: list[str]) -> str:
+  """Monta a docstring lida pelo PLY para uma regra com uma alternativa
+  por nome de token, evitando hardcodar essas alternativas quando elas já
+  correspondem a uma categoria inteira de TokenEnum"""
+  first, *rest = token_names
+  lines = [f"{rule_name} : {first}", *(f"| {name}" for name in rest)]
+  return "\n".join(lines)
 
 
 def p_empty(p):
@@ -188,29 +198,12 @@ def p_enter_class_scope(p):
 
 
 def p_class_stereotype(p):
-  """
-  class_stereotype : KIND
-                    | SUBKIND
-                    | ROLE
-                    | PHASE
-                    | CATEGORY
-                    | MIXIN
-                    | PHASEMIXIN
-                    | ROLEMIXIN
-                    | HISTORICALROLEMIXIN
-                    | COLLECTIVE
-                    | QUANTITY
-                    | QUALITY
-                    | MODE
-                    | INTRISICMODE
-                    | EXTRINSICMODE
-                    | HISTORICALROLE
-                    | RELATOR
-                    | EVENT
-                    | SITUATION
-                    | PROCESS
-  """
   p[0] = p[1]
+
+
+p_class_stereotype.__doc__ = _alternatives_doc(
+  "class_stereotype", token_names_by_category(TokenEnum.CLASS_STEREOTYPES)
+)
 
 
 def p_opt_specializes(p):
@@ -286,21 +279,17 @@ def p_attribute_declaration(p):
 
 
 def p_type_name(p):
-  """
-  type_name : NUMBER
-            | STRING
-            | BOOLEAN
-            | DATE
-            | TIME
-            | DATETIME
-            | CLASS_ID
-  """
   token = p[1]
 
   if token.token_type == TokenEnum.CLASS_ID:
     semantic_actions.resolve_later(token, _TYPE_LIKE)
 
   p[0] = token.value
+
+
+p_type_name.__doc__ = _alternatives_doc(
+  "type_name", [*token_names_by_category(TokenEnum.NATIVE_TYPES), "CLASS_ID"]
+)
 
 
 def p_opt_cardinality(p):
@@ -328,14 +317,12 @@ def p_modifiers_list(p):
 
 
 def p_modifier(p):
-  """
-  modifier : ORDERED
-           | CONST
-           | DERIVED
-           | SUBSETS
-           | REDEFINES
-  """
   p[0] = p[1].value
+
+
+p_modifier.__doc__ = _alternatives_doc(
+  "modifier", token_names_by_category(TokenEnum.META_ATTRIBUTES)
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -458,34 +445,12 @@ def p_class_id_list(p):
 
 
 def p_relation_stereotype(p):
-  """
-  relation_stereotype : MATERIAL
-                       | DERIVATION
-                       | COMPARATIVE
-                       | MEDIATION
-                       | CHARACTERIZATION
-                       | EXTERNALDEPENDENCE
-                       | COMPONENTOF
-                       | MEMBEROF
-                       | SUBCOLLECTIONOF
-                       | SUBQUALITYOF
-                       | INSTANTIATION
-                       | TERMINATION
-                       | PARTICIPATIONAL
-                       | PARTICIPATION
-                       | HISTORICALDEPENDENCE
-                       | CREATION
-                       | MANIFESTATION
-                       | BRINGSABOUT
-                       | TRIGGERS
-                       | COMPOSITION
-                       | AGGREGATION
-                       | INHERENCE
-                       | VALUE
-                       | FORMAL
-                       | CONSTITUTION
-  """
   p[0] = p[1]
+
+
+p_relation_stereotype.__doc__ = _alternatives_doc(
+  "relation_stereotype", token_names_by_category(TokenEnum.RELATION_STEREOTYPES)
+)
 
 
 def p_relation_symbol(p):

@@ -1,4 +1,5 @@
-from lexico_analyzer.token_definitions import reserved_words
+from lexico_analyzer.token_definitions import reserved_words, token_names_by_category
+from lexico_analyzer.token_types import TokenEnum
 
 from . import semantic_actions
 from .errors import SyntacticError
@@ -9,54 +10,21 @@ syntax_errors: list[SyntacticError] = []
 analyzer = None
 parser_ref = None
 
-# Nomes de token do PLY (ex.: "KIND", "RELATION") correspondentes a palavras
-# reservadas válidas do Tonto, usado para distinguir "token conhecido pela
-# linguagem mas ainda não suportado por esta gramática" de um token qualquer.
 _RESERVED_TOKEN_NAMES = {token_name for token_name, _ in reserved_words.values()}
 
-# Palavras reservadas que a gramática atual já sabe tratar; qualquer outra
-# reservada cai na sugestão de "ainda não suportado" em `_suggestion_for_token`.
-_SUPPORTED_TOKEN_NAMES = {
+_SUPPORTED_CATEGORIES = (
+  TokenEnum.CLASS_STEREOTYPES,
+  TokenEnum.RELATION_STEREOTYPES,
+  TokenEnum.NATIVE_TYPES,
+  TokenEnum.META_ATTRIBUTES,
+)
+
+_SUPPORTED_KEYWORDS = {
   "IMPORT",
   "PACKAGE",
   "ENUM",
   "DATATYPE",
-  # estereótipos de classe
-  "KIND",
-  "SUBKIND",
-  "ROLE",
-  "PHASE",
-  "CATEGORY",
-  "MIXIN",
-  "PHASEMIXIN",
-  "ROLEMIXIN",
-  "HISTORICALROLEMIXIN",
-  "COLLECTIVE",
-  "QUANTITY",
-  "QUALITY",
-  "MODE",
-  "INTRISICMODE",
-  "EXTRINSICMODE",
-  "HISTORICALROLE",
-  "RELATOR",
-  "EVENT",
-  "SITUATION",
-  "PROCESS",
-  # cláusula de especialização e tipos de atributo
   "SPECIALIZES",
-  "NUMBER",
-  "STRING",
-  "BOOLEAN",
-  "DATE",
-  "TIME",
-  "DATETIME",
-  # meta-atributos
-  "ORDERED",
-  "CONST",
-  "DERIVED",
-  "SUBSETS",
-  "REDEFINES",
-  # genset (generalization sets)
   "GENSET",
   "DISJOINT",
   "OVERLAPPING",
@@ -65,34 +33,14 @@ _SUPPORTED_TOKEN_NAMES = {
   "GENERAL",
   "SPECIFICS",
   "WHERE",
-  # relações
   "RELATION",
-  "MATERIAL",
-  "DERIVATION",
-  "COMPARATIVE",
-  "MEDIATION",
-  "CHARACTERIZATION",
-  "EXTERNALDEPENDENCE",
-  "COMPONENTOF",
-  "MEMBEROF",
-  "SUBCOLLECTIONOF",
-  "SUBQUALITYOF",
-  "INSTANTIATION",
-  "TERMINATION",
-  "PARTICIPATIONAL",
-  "PARTICIPATION",
-  "HISTORICALDEPENDENCE",
-  "CREATION",
-  "MANIFESTATION",
-  "BRINGSABOUT",
-  "TRIGGERS",
-  "COMPOSITION",
-  "AGGREGATION",
-  "INHERENCE",
-  "VALUE",
-  "FORMAL",
-  "CONSTITUTION",
 }
+
+_SUPPORTED_TOKEN_NAMES = {
+  name
+  for category in _SUPPORTED_CATEGORIES
+  for name in token_names_by_category(category)
+} | _SUPPORTED_KEYWORDS
 
 _RELATION_SYMBOL_TOKENS = {
   "ASSOCIATION",
