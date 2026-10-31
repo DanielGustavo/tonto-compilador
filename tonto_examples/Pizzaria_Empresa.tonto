@@ -1,0 +1,15 @@
+import Endereco
+
+package Empresa
+
+//=============================================
+// DEFINICAO DA CLASSE EMPRESA
+// 'endereco' e 'contato' usam datatypes importados do pacote Endereco.
+kind Empresa {
+    nome : string [1]
+    cnpj : string [1]
+    endereco : Endereco [1]
+    contato : Contato [0..1]
+}
+
+role Pizzaria specializes Empresa

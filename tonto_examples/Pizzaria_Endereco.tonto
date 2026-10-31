@@ -1,0 +1,21 @@
+package Endereco
+
+//=============================================
+// DEFINICAO DO DATATYPE ENDERECO
+// Tipo derivado a partir dos tipos nativos de Tonto (string, number).
+datatype Endereco {
+    rua : string
+    numero : number
+    complemento : string
+    bairro : string
+    cidade : string
+}
+
+//=============================================
+// DATATYPE QUE REUTILIZA OUTRO DATATYPE
+// 'Contato' usa 'Endereco' como tipo de atributo, alem de tipos nativos.
+datatype Contato {
+    telefone : string
+    email : string
+    endereco : Endereco
+}

@@ -47,21 +47,19 @@ def print_tabela_sintese(
 ) -> None:
   imported = imported or []
 
-  def own(declaration_type: type[_NodeT]) -> list[tuple[_NodeT, str]]:
+  def own_packages(declaration_type: type[_NodeT]) -> list[tuple[_NodeT, str]]:
     return [(d, "-") for d in package.declarations if isinstance(d, declaration_type)]
 
-  def merged(declaration_type: type[_NodeT]) -> list[tuple[_NodeT, str]]:
-    return own(declaration_type) + [
+  def merged_packages(declaration_type: type[_NodeT]) -> list[tuple[_NodeT, str]]:
+    return own_packages(declaration_type) + [
       (d, origin) for d, origin in imported if isinstance(d, declaration_type)
     ]
 
-  classes = merged(ast_nodes.ClassDeclaration)
-  datatypes = merged(ast_nodes.DataTypeDeclaration)
-  enums = merged(ast_nodes.Enumeration)
-  gensets = merged(ast_nodes.GeneralizationSet)
-  external_relations = [
-    d for d in package.declarations if isinstance(d, ast_nodes.Relation)
-  ]
+  classes = merged_packages(ast_nodes.ClassDeclaration)
+  datatypes = merged_packages(ast_nodes.DataTypeDeclaration)
+  enums = merged_packages(ast_nodes.Enumeration)
+  gensets = merged_packages(ast_nodes.GeneralizationSet)
+  external_relations = merged_packages(ast_nodes.Relation)
 
   print("\n============ TABELA DE SÍNTESE ============")
   print(f"\nPacote: {package.name}")
@@ -158,13 +156,39 @@ def print_tabela_sintese(
       (
         classe,
         relacao.stereotype,
-        relacao.name or "(anônima)",
+        relacao.name or relacao.anonymous_label or "(anônima)",
         relacao.target,
         relacao.source_cardinality or "-",
         relacao.target_cardinality or "-",
         origem,
       )
       for classe, relacao, origem in internal_relations
+    ],
+    indent="  ",
+  )
+
+  print_table(
+    "Relações externas",
+    (
+      "Nome",
+      "Estereótipo",
+      "Origem",
+      "Destino",
+      "Cardinalidade origem",
+      "Cardinalidade destino",
+      "Pacote de origem",
+    ),
+    [
+      (
+        node.name or node.anonymous_label or "(anônima)",
+        node.stereotype,
+        node.source or "-",
+        node.target,
+        node.source_cardinality or "-",
+        node.target_cardinality or "-",
+        origem,
+      )
+      for node, origem in external_relations
     ],
     indent="  ",
   )
@@ -196,16 +220,6 @@ def print_tabela_sintese(
         origem,
       )
       for node, origem in gensets
-    ],
-    indent="  ",
-  )
-
-  print_table(
-    "Relações externas",
-    ("Nome", "Estereótipo", "Origem", "Destino"),
-    [
-      (node.name or "(anônima)", node.stereotype, node.source or "-", node.target)
-      for node in external_relations
     ],
     indent="  ",
   )

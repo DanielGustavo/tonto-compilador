@@ -1,0 +1,65 @@
+import Ingredientes_Que_Nao_Existe
+
+package Pizzaria_Erros
+
+//=============================================
+// 1) ERRO SEMANTICO: classe redeclarada no mesmo escopo
+kind Forno
+kind Forno
+
+//=============================================
+// 2) ERRO SINTATICO: falta o ':' entre o nome do atributo e o tipo
+kind Caixa_De_Pizza {
+    tamanho_Da_Caixa string [1]
+}
+
+kind Depois_Do_Atributo_Com_Erro
+
+//=============================================
+// 3) ERRO SEMANTICO: 'specializes' para uma classe nao declarada
+role Cliente_Vip specializes Cliente_Que_Nao_Existe
+
+//=============================================
+// 4) ERRO SINTATICO: falta ',' entre os nomes em 'specifics'
+kind Bebida_Com_Erro
+kind Suco_Com_Erro
+kind Agua_Com_Erro
+
+genset Opcao_De_Bebida_Com_Erro {
+    general Bebida_Com_Erro
+    specifics Suco_Com_Erro Agua_Com_Erro
+}
+
+kind Depois_Do_Genset_Com_Erro
+
+//=============================================
+// 5) ERRO SINTATICO: genset sem nome
+genset {
+    general Bebida_Com_Erro
+    specifics Suco_Com_Erro, Agua_Com_Erro
+}
+
+//=============================================
+// 6) ERRO SINTATICO: relacao interna sem a classe de destino
+kind Forno_Industrial {
+    @componentOf [1] <>--
+}
+
+kind Depois_Da_Relacao_Com_Erro
+
+//=============================================
+// 7) ERRO SEMANTICO: alvo de relacao interna nao declarado
+kind Balcao_De_Atendimento {
+    @componentOf [1] <>-- [1..*] Vidro_Temperado_Que_Nao_Existe
+}
+
+//=============================================
+// 8) ERRO SINTATICO: falta ',' entre instancias de um enum
+enum Sabor_De_Pizza {
+    Calabresa01,
+    Portuguesa02
+    Marguerita03,
+    Quatro_Queijos04
+}
+
+kind Depois_Do_Enum_Com_Erro

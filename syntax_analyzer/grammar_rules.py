@@ -527,6 +527,7 @@ def p_relation_declaration_anonymous(p):
     name=None,
     target_cardinality=p[7],
     target=target.value,
+    anonymous_label=semantic_actions.next_anonymous_relation_label(),
   )
 
   semantic_actions.resolve_later(source, _CLASS_ONLY)
@@ -580,6 +581,7 @@ def p_relation_end_declaration_anonymous(p):
     name=None,
     target_cardinality=p[5],
     target=target.value,
+    anonymous_label=semantic_actions.next_anonymous_relation_label(),
   )
 
   semantic_actions.resolve_later(target, _CLASS_ONLY)

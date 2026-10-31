@@ -29,6 +29,8 @@ class PendingReference:
 
 _pending_references: list[PendingReference] = []
 
+_anonymous_relation_counter: int = 0
+
 _LABEL_BY_CATEGORY: dict[SymbolCategory, str] = {
   SymbolCategory.CLASS: "uma classe",
   SymbolCategory.DATATYPE: "um datatype",
@@ -84,6 +86,13 @@ def restore(snap: dict) -> None:
 
   _pending_references.clear()
   _pending_references.extend(snap["pending_references"])
+
+
+def next_anonymous_relation_label() -> str:
+  global _anonymous_relation_counter
+
+  _anonymous_relation_counter += 1
+  return f"relação #{_anonymous_relation_counter}"
 
 
 def declare(token, category: SymbolCategory) -> Symbol:

@@ -89,6 +89,7 @@ class Relation(Node):
   name: str | None
   target_cardinality: str | None
   target: str
+  anonymous_label: str | None = None
 
   def label(self) -> str:
     source = self.source if self.source is not None else "(implicit)"

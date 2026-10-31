@@ -125,16 +125,22 @@ def _resolve_imports(
         categoria = SymbolCategory.ENUM
       elif isinstance(declaracao, ast_nodes.GeneralizationSet):
         categoria = SymbolCategory.GENSET
+      elif isinstance(declaracao, ast_nodes.Relation):
+        categoria = SymbolCategory.RELATION
       else:
         continue
 
-      semantic_actions.declare_imported(
-        declaracao.name,
-        categoria,
-        declaracao.line,
-        declaracao.column,
-        importacao.name,
-      )
+      # Relação externa pode ser anônima (`declaracao.name is None`), caso em
+      # que não há nome pra registrar na tabela de símbolos nem conflito de
+      # nome pra detectar; os outros tipos sempre têm nome.
+      if declaracao.name is not None:
+        semantic_actions.declare_imported(
+          declaracao.name,
+          categoria,
+          declaracao.line,
+          declaracao.column,
+          importacao.name,
+        )
       importados.append((declaracao, importacao.name))
 
     fila.extend(arvore_importada.imports)

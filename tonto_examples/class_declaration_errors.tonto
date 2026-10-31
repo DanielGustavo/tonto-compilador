@@ -1,9 +1,0 @@
-package ClassDeclarationErrorsTest
-
-kind Pessoa {
-    nome string [1]
-}
-
-kind Vacina {
-    tipo : string
-}
