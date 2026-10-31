@@ -130,9 +130,6 @@ def _resolve_imports(
       else:
         continue
 
-      # Relação externa pode ser anônima (`declaracao.name is None`), caso em
-      # que não há nome pra registrar na tabela de símbolos nem conflito de
-      # nome pra detectar; os outros tipos sempre têm nome.
       if declaracao.name is not None:
         semantic_actions.declare_imported(
           declaracao.name,
