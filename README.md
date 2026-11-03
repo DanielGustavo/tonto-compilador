@@ -62,15 +62,16 @@ tonto-compilador/
 │   ├── parser.py                  (monta o parser, resolve imports entre arquivos)
 │   └── reporter.py                (erros sintáticos/semânticos + tabela de síntese)
 │
-└── tonto_examples/                (27 arquivos .tonto usados como teste, pasta plana)
-    ├── car.tonto, Hospital.tonto, ...        (exemplos gerais / Ontology Design Patterns)
-    ├── class_declaration.tonto / _errors.tonto
-    ├── datatype_declaration.tonto / _errors.tonto
-    ├── genset_declaration.tonto / _errors.tonto
-    ├── relation_declaration.tonto / _errors.tonto
-    ├── error_recovery_class_body.tonto, error_recovery_package_level.tonto
-    ├── semantic_errors.tonto, syntax_errors.tonto, syntax.tonto
-    └── Bookstore.tonto, Library.tonto, Catalog.tonto  (exemplo de import entre pacotes)
+└── tonto_examples/                (10 arquivos .tonto usados como teste, pasta plana)
+    ├── Pizzaria.tonto                      (pacote principal, importa os demais)
+    ├── Pizzaria_Pessoa.tonto, Pizzaria_Cliente.tonto,
+    │   Pizzaria_Empresa.tonto, Pizzaria_Endereco.tonto,
+    │   Pizzaria_Pizza.tonto, Pizzaria_CoberturasDePizza.tonto,
+    │   Pizzaria_ItensDaPizzaria.tonto      (cenário "Pizzaria" dividido em pacotes
+    │                                        ligados por import, com ciclo entre
+    │                                        Pizza e CoberturasDePizza)
+    ├── Pizzaria_MONO.tonto                 (mesma ontologia em um único pacote, sem imports)
+    └── Pizzaria_Erros.tonto                (casos propositais de erro léxico/sintático/semântico)
 ```
 
 ### <a name="descricao-dos-componentes"></a> Descrição dos componentes
@@ -203,20 +204,19 @@ tonto-compilador/
 
 * `tonto_examples/` (Diretório)
 
-    * Arquivos de código-fonte em TONTO usados como casos de teste: os
-      exemplos do repositório da disciplina, os *Ontology Design Patterns*
-      (`Relator_Pattern.tonto`, `Role_Pattern.tonto`, `Phase_Pattern.tonto`,
-      ...), exemplos dedicados a cada construção sintática e seus respectivos
-      casos de erro (`class_declaration.tonto`/`_errors`,
-      `datatype_declaration.tonto`/`_errors`, `genset_declaration.tonto`/`_errors`,
-      `relation_declaration.tonto`/`_errors`), exemplos de recuperação de erro
-      (`error_recovery_class_body.tonto`, `error_recovery_package_level.tonto`)
-      e de erros semânticos/sintáticos dedicados (`semantic_errors.tonto`,
-      `syntax_errors.tonto`, `syntax.tonto`). Os imports entre pacotes são
-      resolvidos casando o nome em `import <Nome>` com o cabeçalho
-      `package <Nome>` de um arquivo **vizinho na mesma pasta** — não há
-      estrutura de subpastas — como no encadeamento `Bookstore` → `Library` →
-      `Catalog`.
+    * Arquivos de código-fonte em TONTO usados como casos de teste: um
+      cenário único de pizzaria, dividido em pacotes interligados por
+      `import` (`Pizzaria.tonto` importa `Pessoa`, `Cliente`, `Pizza`,
+      `Empresa` e `ItensDaPizzaria`; `Empresa` por sua vez importa
+      `Endereco`; `Pessoa` e `Cliente` se importam mutuamente, assim como
+      `Pizza` e `CoberturasDePizza`), a mesma ontologia reunida em um único
+      pacote sem imports (`Pizzaria_MONO.tonto`) e um arquivo dedicado a
+      casos de erro léxico/sintático/semântico propositais
+      (`Pizzaria_Erros.tonto`). Os imports entre pacotes são resolvidos
+      casando o nome em `import <Nome>` com o cabeçalho `package <Nome>` de
+      um arquivo **vizinho na mesma pasta** — não há estrutura de
+      subpastas — e a busca em largura de `parser.py` evita loop infinito
+      mesmo em ciclos como `Pizza` ⇄ `CoberturasDePizza`.
 
 * `requirements.txt`, `pyproject.toml`, `ruff.toml`, `.editorconfig`
 
@@ -288,17 +288,17 @@ python3 main.py
 Analisando um arquivo específico, com as duas fases:
 
 ```bash
-python3 main.py tonto_examples/car.tonto
+python3 main.py tonto_examples/Pizzaria.tonto
 ```
 
 Rodando só uma das fases — a flag, quando usada, deve vir **antes** do
 caminho do arquivo:
 
 ```bash
-python3 main.py --lexic tonto_examples/car.tonto   # só análise léxica
-python3 main.py --syntax tonto_examples/car.tonto  # só análise sintática/semântica
-python3 main.py --lexic                            # só léxica, com menu de exemplos
-python3 main.py --syntax                           # só sintática, com menu de exemplos
+python3 main.py --lexic tonto_examples/Pizzaria.tonto   # só análise léxica
+python3 main.py --syntax tonto_examples/Pizzaria.tonto  # só análise sintática/semântica
+python3 main.py --lexic                                 # só léxica, com menu de exemplos
+python3 main.py --syntax                                # só sintática, com menu de exemplos
 ```
 
 ### <a name="entrada-do-sistema"></a> Entrada do sistema
@@ -310,9 +310,9 @@ Sem argumento de arquivo, o programa lista os `.tonto` da pasta
 ```
 --- Exemplos TONTO disponíveis ---
 
-[00]  Bookstore.tonto
-[01]  Catalog.tonto
-[02]  Hospital.tonto
+[00]  Pizzaria.tonto
+[01]  Pizzaria_Cliente.tonto
+[02]  Pizzaria_CoberturasDePizza.tonto
 ...
 
 Escolha o número do arquivo a analisar:
@@ -328,15 +328,15 @@ usado apenas na exibição, não muda o tipo real atribuído pelo lexer. Símbol
 classificação, então a coluna fica em branco para eles.
 
 ```
-linha 4: "subkind CarAgency specializes Organization"
-┌──────────────┬────────┬───────────────────┬─────────────────────────┐
-│ Valor        │ Coluna │ Tipo              │ Classificação           │
-├──────────────┼────────┼───────────────────┼─────────────────────────┤
-│ subkind      │ 1      │ CLASS_STEREOTYPES │ Estereótipos de classe  │
-│ CarAgency    │ 9      │ CLASS_ID          │ Classes                 │
-│ specializes  │ 19     │ KEYWORDS          │ Palavras reservadas     │
-│ Organization │ 31     │ CLASS_ID          │ Classes                 │
-└──────────────┴────────┴───────────────────┴─────────────────────────┘
+linha 15: "role Pizzaria specializes Empresa"
+┌─────────────┬────────┬───────────────────┬────────────────────────┐
+│ Valor       │ Coluna │ Tipo              │ Classificação          │
+├─────────────┼────────┼───────────────────┼────────────────────────┤
+│ role        │ 1      │ CLASS_STEREOTYPES │ Estereótipo de classe  │
+│ Pizzaria    │ 6      │ CLASS_ID          │ Classe                 │
+│ specializes │ 15     │ KEYWORDS          │ Palavra reservada      │
+│ Empresa     │ 27     │ CLASS_ID          │ Classe                 │
+└─────────────┴────────┴───────────────────┴────────────────────────┘
 ```
 
 Em seguida, a contagem de tokens reconhecidos por classificação (tipos sem
@@ -346,60 +346,69 @@ para `lexico_analyzer/exports/<nome_do_arquivo>.json`:
 
 ```
 --- Contagem de tokens por classificação ---
-  Palavras reservadas: 4
-  Classes: 8
-  Estereótipos de classe: 4
-  ...
+  Palavra reservada: 3
+  Classe: 7
+  Relação: 4
+  Instância: 0
+  Estereótipo de classe: 2
+  Estereótipo de relação: 0
+  Tipo nativo: 2
+  Novo tipo: 0
 
-Total: 37 tokens
+Total: 28 tokens
 
-Tokens e contagem exportados para: lexico_analyzer/exports/car.json
+Tokens e contagem exportados para: lexico_analyzer/exports/Pizzaria_Empresa.json
 ```
 
 **Análise sintática/semântica** — ao terminar o parse, se o pacote foi
 reconhecido, é impressa a **tabela de síntese**: contagens gerais e uma
 sub-tabela por tipo de declaração (própria ou trazida por import resolvido,
 identificada pela coluna "Pacote de origem"). O exemplo abaixo é a saída real
-de `python3 main.py --syntax tonto_examples/Library.tonto` — `Library.tonto`
-importa `Catalog.tonto` (que declara a classe `Genre`, usada como tipo do
-atributo `genre` em `Book`):
+de `python3 main.py --syntax tonto_examples/Pizzaria_Empresa.tonto` —
+`Pizzaria_Empresa.tonto` importa `Pizzaria_Endereco.tonto` (que declara os
+datatypes `Endereco` e `Contato`, usados como tipo dos atributos `endereco` e
+`contato` em `Empresa`):
 
 ```
 ============ TABELA DE SÍNTESE ============
 
-Pacote: Library
-  Classes: 3  |  Datatypes: 0  |  Enums: 0  |  Gensets: 0  |  Relações externas: 0
+Pacote: Empresa
+  Classes: 2  |  Datatypes: 2  |  Enums: 0  |  Gensets: 0  |  Relações externas: 0
 
 Pacotes
-  ┌─────────┬─────────┬───────────┬───────┬─────────┐
-  │ Nome    │ Classes │ Datatypes │ Enums │ Gensets │
-  ├─────────┼─────────┼───────────┼───────┼─────────┤
-  │ Library │ 2       │ 0         │ 0     │ 0       │
-  │ Catalog │ 1       │ 0         │ 0     │ 0       │
-  └─────────┴─────────┴───────────┴───────┴─────────┘
+  ┌──────────┬─────────┬───────────┬───────┬─────────┐
+  │ Nome     │ Classes │ Datatypes │ Enums │ Gensets │
+  ├──────────┼─────────┼───────────┼───────┼─────────┤
+  │ Empresa  │ 2       │ 0         │ 0     │ 0       │
+  │ Endereco │ 0       │ 2         │ 0     │ 0       │
+  └──────────┴─────────┴───────────┴───────┴─────────┘
 
 Classes
-  ┌────────┬─────────────┬─────────────┬───────────┬───────────────────┬──────────────────┐
-  │ Nome   │ Estereótipo │ Especializa │ Atributos │ Relações internas │ Pacote de origem │
-  ├────────┼─────────────┼─────────────┼───────────┼───────────────────┼──────────────────┤
-  │ Book   │ kind        │ -           │ 3         │ 0                 │ -                │
-  │ Author │ kind        │ -           │ 0         │ 0                 │ -                │
-  │ Genre  │ kind        │ -           │ 0         │ 0                 │ Catalog          │
-  └────────┴─────────────┴─────────────┴───────────┴───────────────────┴──────────────────┘
+  ┌──────────┬─────────────┬─────────────┬───────────┬───────────────────┬──────────────────┐
+  │ Nome     │ Estereótipo │ Especializa │ Atributos │ Relações internas │ Pacote de origem │
+  ├──────────┼─────────────┼─────────────┼───────────┼───────────────────┼──────────────────┤
+  │ Empresa  │ kind        │ -           │ 4         │ 0                 │ -                │
+  │ Pizzaria │ role        │ Empresa     │ 0         │ 0                 │ -                │
+  └──────────┴─────────────┴─────────────┴───────────┴───────────────────┴──────────────────┘
 
 Relações internas
   (nenhum)
 
-Datatypes
+Relações externas
   (nenhum)
+
+Datatypes
+  ┌──────────┬───────────┬──────────────────┐
+  │ Nome     │ Atributos │ Pacote de origem │
+  ├──────────┼───────────┼──────────────────┤
+  │ Endereco │ 5         │ Endereco         │
+  │ Contato  │ 3         │ Endereco         │
+  └──────────┴───────────┴──────────────────┘
 
 Enums
   (nenhum)
 
 Gensets
-  (nenhum)
-
-Relações externas
   (nenhum)
 
 Nenhum erro léxico encontrado.

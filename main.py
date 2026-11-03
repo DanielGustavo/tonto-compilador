@@ -6,9 +6,9 @@ resultado aos módulos de apresentação.
 
 Uso:
     python3 main.py
-    python3 main.py tonto_examples/car.tonto
-    python3 main.py --lexic tonto_examples/car.tonto
-    python3 main.py --syntax tonto_examples/car.tonto
+    python3 main.py tonto_examples/Pizzaria.tonto
+    python3 main.py --lexic tonto_examples/Pizzaria.tonto
+    python3 main.py --syntax tonto_examples/Pizzaria.tonto
     python3 main.py --lexic
     python3 main.py --syntax
 """
