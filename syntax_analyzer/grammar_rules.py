@@ -8,10 +8,11 @@ atualizar/consultar a tabela de símbolos durante o próprio parse.
 from lexico_analyzer import lexer_rules
 from lexico_analyzer.token_definitions import token_names_by_category
 from lexico_analyzer.token_types import TokenEnum
+from semantic_analyzer import semantic_actions
+from semantic_analyzer.symbol import SymbolCategory
 
-from . import ast_nodes, semantic_actions
+from . import ast_nodes
 from .error_handling import p_error
-from .symbol import SymbolCategory
 
 tokens = lexer_rules.tokens
 start = "program"

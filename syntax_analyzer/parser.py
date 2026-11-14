@@ -1,14 +1,13 @@
 """Monta o parser PLY e resolve imports entre arquivos `.tonto`.
 
 Constrói o parser a partir de `grammar_rules` (`yacc.yacc`), liga
-`error_handling` a ele, e implementa a parte mais particular deste
-compilador: a resolução de `import <Nome>` contra outros arquivos `.tonto`
-do mesmo diretório, sem estrutura de pastas, só casando o nome importado
-com o cabeçalho `package <Nome>` de um arquivo vizinho. Expõe `analisar_codigo`
-e `analisar_arquivo` como pontos de entrada públicos.
+`error_handling` a ele, e implementa o parse isolado de um arquivo
+importado (`_parse_file_isolated`), usado por
+`semantic_analyzer.imports.resolve_imports` para decidir quais `import
+<Nome>` casam com o cabeçalho `package <Nome>` de um arquivo vizinho. Expõe
+`analisar_codigo` e `analisar_arquivo` como pontos de entrada públicos.
 """
 
-import re
 from pathlib import Path
 
 from ply import yacc
@@ -16,11 +15,13 @@ from ply import yacc
 from lexico_analyzer import lexer_rules
 from lexico_analyzer.analyzer import construir_lexer
 from lexico_analyzer.errors import LexicalError
+from semantic_analyzer import semantic_actions
+from semantic_analyzer.errors import SemanticError
+from semantic_analyzer.imports import resolve_imports
 
-from . import ast_nodes, error_handling, grammar_rules, semantic_actions
+from . import ast_nodes, error_handling, grammar_rules
 from .ast_nodes import Node
-from .errors import SemanticError, SyntacticError
-from .symbol import SymbolCategory
+from .errors import SyntacticError
 
 lexer = construir_lexer()
 error_handling.analyzer = lexer
@@ -34,20 +35,6 @@ parser = yacc.yacc(
 )
 
 error_handling.parser_ref = parser
-
-_PACKAGE_NAME_RE = re.compile(r"^\s*package\s+([A-Z][a-zA-Z_]*)", re.MULTILINE)
-
-
-def _index_packages_by_name(base_dir: Path) -> dict[str, Path]:
-  indice: dict[str, Path] = {}
-
-  for arquivo in base_dir.glob("*.tonto"):
-    match = _PACKAGE_NAME_RE.search(arquivo.read_text(encoding="utf-8"))
-
-    if match is not None:
-      indice[match.group(1)] = arquivo
-
-  return indice
 
 
 def _parse_file_isolated(caminho: Path) -> ast_nodes.Program | None:
@@ -76,75 +63,6 @@ def _parse_file_isolated(caminho: Path) -> ast_nodes.Program | None:
     error_handling.syntax_errors.extend(erros_sintaticos_originais)
 
 
-def _resolve_imports(
-  programa: ast_nodes.Program, base_dir: Path | None
-) -> list[tuple[Node, str]]:
-  importados: list[tuple[Node, str]] = []
-
-  if base_dir is None or not programa.imports:
-    return importados
-
-  pacote_atual = programa.package.name if programa.package else None
-  indice = _index_packages_by_name(base_dir)
-
-  # Busca em grafo sobre os imports: cada pacote resolvido também pode
-  # importar outros, então os imports do arquivo importado são enfileirados
-  # de volta (`fila.extend(...)` mais abaixo). `visitados` evita reprocessar
-  # o mesmo pacote em caso de import cíclico ou duplicado.
-  visitados: set[str] = {pacote_atual} if pacote_atual else set()
-  fila: list[ast_nodes.Import] = list(programa.imports)
-
-  while fila:
-    importacao = fila.pop(0)
-
-    if importacao.name in visitados:
-      continue
-
-    visitados.add(importacao.name)
-    caminho = indice.get(importacao.name)
-
-    if caminho is None:
-      semantic_actions.report_unresolved_import(
-        importacao.name, importacao.line, importacao.column
-      )
-      continue
-
-    arvore_importada = _parse_file_isolated(caminho)
-
-    if arvore_importada is None or arvore_importada.package is None:
-      continue
-
-    pacote_importado = arvore_importada.package
-
-    for declaracao in pacote_importado.declarations:
-      if isinstance(declaracao, ast_nodes.ClassDeclaration):
-        categoria = SymbolCategory.CLASS
-      elif isinstance(declaracao, ast_nodes.DataTypeDeclaration):
-        categoria = SymbolCategory.DATATYPE
-      elif isinstance(declaracao, ast_nodes.Enumeration):
-        categoria = SymbolCategory.ENUM
-      elif isinstance(declaracao, ast_nodes.GeneralizationSet):
-        categoria = SymbolCategory.GENSET
-      elif isinstance(declaracao, ast_nodes.Relation):
-        categoria = SymbolCategory.RELATION
-      else:
-        continue
-
-      if declaracao.name is not None:
-        semantic_actions.declare_imported(
-          declaracao.name,
-          categoria,
-          declaracao.line,
-          declaracao.column,
-          importacao.name,
-        )
-      importados.append((declaracao, importacao.name))
-
-    fila.extend(arvore_importada.imports)
-
-  return importados
-
-
 def analisar_codigo(
   codigo_fonte: str,
   base_dir: Path | None = None,
@@ -164,7 +82,7 @@ def analisar_codigo(
 
   declaracoes_importadas: list[tuple[Node, str]] = []
   if isinstance(arvore, ast_nodes.Program):
-    declaracoes_importadas = _resolve_imports(arvore, base_dir)
+    declaracoes_importadas = resolve_imports(arvore, base_dir, _parse_file_isolated)
 
   erros_semanticos = semantic_actions.finalize()
 

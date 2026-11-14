@@ -1,10 +1,10 @@
-"""Apresentação dos resultados da Análise Sintática/Semântica.
+"""Apresentação dos resultados da Análise Sintática.
 
-Paralelo a `lexico_analyzer/reporter.py`: imprime as listas de erro
-sintático e semântico, e `print_tabela_sintese`, que mescla as declarações
-do próprio pacote com as trazidas por imports resolvidos (ver
-`parser.py::_resolve_imports`) e desenha as sub-tabelas da "tabela de
-síntese" via o `table_printer` compartilhado.
+Paralelo a `lexico_analyzer/reporter.py` e `semantic_analyzer/reporter.py`:
+imprime a lista de erro sintático, e `print_tabela_sintese`, que mescla as
+declarações do próprio pacote com as trazidas por imports resolvidos (ver
+`semantic_analyzer/imports.py::resolve_imports`) e desenha as sub-tabelas da
+"tabela de síntese" via o `table_printer` compartilhado.
 """
 
 from typing import TypeVar
@@ -12,7 +12,7 @@ from typing import TypeVar
 from table_printer import print_table
 
 from . import ast_nodes
-from .errors import SemanticError, SyntacticError
+from .errors import SyntacticError
 
 _NodeT = TypeVar("_NodeT", bound=ast_nodes.Node)
 
@@ -23,18 +23,6 @@ def print_syntax_errors(errors: list[SyntacticError]) -> None:
     return
 
   print(f"\n--- Erros sintáticos ({len(errors)}) ---")
-
-  for error in errors:
-    print(f"  linha {error.line}, coluna {error.column}: {error.message}")
-    print(f"    sugestão: {error.suggestion}")
-
-
-def print_semantic_errors(errors: list[SemanticError]) -> None:
-  if not errors:
-    print("\nNenhum erro semântico encontrado.")
-    return
-
-  print(f"\n--- Erros semânticos ({len(errors)}) ---")
 
   for error in errors:
     print(f"  linha {error.line}, coluna {error.column}: {error.message}")

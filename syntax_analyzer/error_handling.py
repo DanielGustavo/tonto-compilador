@@ -9,8 +9,8 @@ consumido por `syntax_analyzer/reporter.py`.
 
 from lexico_analyzer.token_definitions import reserved_words, token_names_by_category
 from lexico_analyzer.token_types import TokenEnum
+from semantic_analyzer import semantic_actions
 
-from . import semantic_actions
 from .errors import SyntacticError
 
 syntax_errors: list[SyntacticError] = []

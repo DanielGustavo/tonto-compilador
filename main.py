@@ -24,13 +24,10 @@ from lexico_analyzer.reporter import (
   imprimir_visao_analitica,
   print_token_count,
 )
+from semantic_analyzer.reporter import print_semantic_errors
 from syntax_analyzer import ast_nodes
 from syntax_analyzer.parser import analisar_arquivo as analisar_sintaticamente
-from syntax_analyzer.reporter import (
-  print_semantic_errors,
-  print_syntax_errors,
-  print_tabela_sintese,
-)
+from syntax_analyzer.reporter import print_syntax_errors, print_tabela_sintese
 
 PASTA_DE_EXEMPLOS = Path(__file__).parent / "tonto_examples"
 MODOS = {"--lexic": "lexic", "--syntax": "syntax"}
