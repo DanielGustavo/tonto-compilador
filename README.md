@@ -50,17 +50,23 @@ tonto-compilador/
 │   ├── reporter.py                (como o resultado léxico é exibido/exportado)
 │   └── exports/                   (JSON exportado por reporter.py, um por arquivo)
 │
-├── syntax_analyzer/               (pacote do Analisador Sintático/Semântico)
+├── syntax_analyzer/               (pacote do Analisador Sintático)
 │   ├── __init__.py                (API pública do pacote)
 │   ├── ast_nodes.py               (nós da AST: Program, Package, ClassDeclaration, ...)
+│   ├── errors.py                  (SyntacticError)
+│   ├── grammar_rules.py           (a gramática PLY/YACC propriamente dita)
+│   ├── error_handling.py          (hook de erro do PLY + sugestões de correção)
+│   ├── parser.py                  (monta o parser, faz o parse isolado de imports)
+│   └── reporter.py                (erros sintáticos + tabela de síntese)
+│
+├── semantic_analyzer/             (pacote do Analisador Semântico)
+│   ├── __init__.py                (API pública do pacote)
 │   ├── symbol.py                  (o que é um símbolo: Symbol + SymbolCategory)
 │   ├── symbol_table.py            (tabela de símbolos encadeada por escopo)
-│   ├── errors.py                  (SyntacticError, SemanticError)
-│   ├── grammar_rules.py           (a gramática PLY/YACC propriamente dita)
+│   ├── errors.py                  (SemanticError)
 │   ├── semantic_actions.py        (motor que a gramática chama para declarar/verificar nomes)
-│   ├── error_handling.py          (hook de erro do PLY + sugestões de correção)
-│   ├── parser.py                  (monta o parser, resolve imports entre arquivos)
-│   └── reporter.py                (erros sintáticos/semânticos + tabela de síntese)
+│   ├── imports.py                 (resolve quais imports casam com quais arquivos vizinhos)
+│   └── reporter.py                (erros semânticos)
 │
 └── tonto_examples/                (10 arquivos .tonto usados como teste, pasta plana)
     ├── Pizzaria.tonto                      (pacote principal, importa os demais)
@@ -137,20 +143,63 @@ tonto-compilador/
 
 * `syntax_analyzer/` (Diretório)
 
-    * Pacote Python que encapsula a **Análise Sintática** e a **Análise
-      Semântica**, construído sobre os tokens produzidos pelo
-      `lexico_analyzer`. Também dividido por responsabilidade única:
+    * Pacote Python que encapsula a **Análise Sintática**, construído sobre
+      os tokens produzidos pelo `lexico_analyzer`. Também dividido por
+      responsabilidade única:
 
-    * `__init__.py`: fachada do pacote, reexporta `Node`, os dois tipos de
-      erro, `analisar_arquivo`/`analisar_codigo`, os printers e os tipos de
-      tabela de símbolos. Assim como no pacote léxico, `main.py` também
-      importa alguns submódulos diretamente (`parser`, `reporter`,
-      `ast_nodes`).
+    * `__init__.py`: fachada do pacote, reexporta `Node`, `SyntacticError`,
+      `analisar_arquivo`/`analisar_codigo` e os printers sintáticos. Assim
+      como no pacote léxico, `main.py` também importa alguns submódulos
+      diretamente (`parser`, `reporter`, `ast_nodes`).
 
     * `ast_nodes.py`: define a **AST**. Um `Node(line, column)` base e um
       dataclass por construção da linguagem (`Literal`, `Enumeration`,
       `Attribute`, `ClassDeclaration`, `Relation`, `DataTypeDeclaration`,
       `GeneralizationSet`, `Import`, `Package`, `Program`).
+
+    * `errors.py`: define `SyntacticError` (emitido pela gramática), com
+      valor/lexema, linha, coluna, mensagem e sugestão de correção. O
+      equivalente semântico, `SemanticError`, vive em `semantic_analyzer/`.
+
+    * `grammar_rules.py`: a **gramática PLY/YACC** propriamente dita —
+      equivalente ao arquivo YACC, parceiro de `lexer_rules.py` ser o arquivo
+      LEX. Organizada em seções (programa/pacote, enums, classes, datatypes,
+      gensets, relações); cada regra monta um nó de `ast_nodes` e, quando a
+      construção declara ou usa um nome, chama `semantic_actions` (do pacote
+      `semantic_analyzer`). Inclui o truque de "regras-marcadoras" (produções
+      vazias que rodam no meio de outra regra, via `p[-1]`/`p[-2]`) para abrir
+      o escopo de uma classe, enum ou datatype antes do corpo ser lido.
+
+    * `error_handling.py`: o hook `p_error` do PLY mais um conjunto de
+      heurísticas privadas que olham a pilha de símbolos do parser
+      (`symstack`) para sugerir a causa provável de um erro sintático, em vez
+      de só reportar "token inesperado".
+
+    * `parser.py`: monta o parser PLY a partir de `grammar_rules`
+      (`yacc.yacc`), liga `error_handling`, e implementa o **parse isolado**
+      de um arquivo importado (`_parse_file_isolated`): zera e depois
+      restaura tabelas de símbolo e listas de erro próprias, para que
+      analisar um import não contamine o arquivo principal. Delega a
+      `semantic_analyzer.imports.resolve_imports` a decisão de **quais**
+      imports casam com **quais** arquivos vizinhos, passando essa função de
+      parse isolado como parâmetro. Expõe `analisar_codigo`/`analisar_arquivo`.
+
+    * `reporter.py`: apresentação da fase sintática — lista de erros
+      sintáticos e `print_tabela_sintese`, que mescla declarações próprias
+      com as trazidas por imports resolvidos (ver `semantic_analyzer/imports.py`)
+      e desenha as sub-tabelas (Pacotes, Classes, Relações internas,
+      Datatypes, Enums, Gensets, Relações externas) via `table_printer`.
+
+* `semantic_analyzer/` (Diretório)
+
+    * Pacote Python que encapsula a **Análise Semântica**, construído sobre
+      a AST produzida pelo `syntax_analyzer`. Dividido por responsabilidade
+      única:
+
+    * `__init__.py`: fachada do pacote, reexporta `SemanticError`, `Symbol`,
+      `SymbolCategory`, `SymbolTable` e `print_semantic_errors`. Os
+      submódulos `semantic_actions` e `imports` são importados diretamente
+      por `syntax_analyzer` (mesma convenção dos outros pacotes).
 
     * `symbol.py`: define **o que é um símbolo**. `SymbolCategory` enumera as
       categorias de nomes que a linguagem declara (classe, datatype, enum,
@@ -162,45 +211,31 @@ tonto-compilador/
       escopo aponta para o escopo que o envolve (`put`/`get_local`/`get`, este
       último percorrendo a cadeia até achar o nome ou esgotar os escopos).
 
-    * `errors.py`: define `SyntacticError` (emitido pela gramática) e
-      `SemanticError` (emitido pelas ações semânticas), ambos com
-      valor/lexema, linha, coluna, mensagem e sugestão de correção.
-
-    * `grammar_rules.py`: a **gramática PLY/YACC** propriamente dita —
-      equivalente ao arquivo YACC, parceiro de `lexer_rules.py` ser o arquivo
-      LEX. Organizada em seções (programa/pacote, enums, classes, datatypes,
-      gensets, relações); cada regra monta um nó de `ast_nodes` e, quando a
-      construção declara ou usa um nome, chama `semantic_actions`. Inclui o
-      truque de "regras-marcadoras" (produções vazias que rodam no meio de
-      outra regra, via `p[-1]`/`p[-2]`) para abrir o escopo de uma classe,
-      enum ou datatype antes do corpo ser lido.
+    * `errors.py`: define `SemanticError` (emitido pelas ações semânticas e
+      pela resolução de imports), com valor/lexema, linha, coluna, mensagem e
+      sugestão de correção.
 
     * `semantic_actions.py`: o **motor da análise semântica**, chamado pelas
-      ações da gramática para declarar símbolos, entrar/sair de escopos e
-      marcar nomes usados para verificação posterior (`resolve_later`), que
-      só é resolvida no fim do parse (`finalize`) — depois que o pacote e seus
-      imports já foram vistos por inteiro. O par `snapshot`/`restore` existe
-      para que `parser.py` consiga analisar um arquivo importado
+      ações da gramática (em `syntax_analyzer/grammar_rules.py`) para
+      declarar símbolos, entrar/sair de escopos e marcar nomes usados para
+      verificação posterior (`resolve_later`), que só é resolvida no fim do
+      parse (`finalize`) — depois que o pacote e seus imports já foram vistos
+      por inteiro. O par `snapshot`/`restore` existe para que
+      `syntax_analyzer/parser.py` consiga analisar um arquivo importado
       isoladamente, sem que a tabela de símbolos desse arquivo substitua a do
       arquivo principal em andamento.
 
-    * `error_handling.py`: o hook `p_error` do PLY mais um conjunto de
-      heurísticas privadas que olham a pilha de símbolos do parser
-      (`symstack`) para sugerir a causa provável de um erro sintático, em vez
-      de só reportar "token inesperado".
+    * `imports.py`: decide **quais** `import <Nome>` casam com **quais**
+      arquivos `.tonto` vizinhos (pelo cabeçalho `package <Nome>`), declara
+      os símbolos que eles exportam (`semantic_actions.declare_imported`) e
+      percorre o grafo de imports em busca em largura (BFS), evitando
+      ciclos/duplicatas. Quem efetivamente faz o parse isolado de cada
+      arquivo importado é recebido de fora (parâmetro `parse_file`), pois
+      essa mecânica depende do parser PLY, que vive em `syntax_analyzer`.
 
-    * `parser.py`: monta o parser PLY a partir de `grammar_rules`
-      (`yacc.yacc`), liga `error_handling`, e implementa a resolução de
-      `import` entre arquivos `.tonto` do mesmo diretório: indexa os arquivos
-      vizinhos pelo cabeçalho `package <Nome>`, analisa cada import
-      isoladamente e percorre o grafo de imports em busca em largura (BFS),
-      evitando ciclos/duplicatas. Expõe `analisar_codigo`/`analisar_arquivo`.
-
-    * `reporter.py`: apresentação da fase sintática/semântica — listas de
-      erro e `print_tabela_sintese`, que mescla declarações próprias com as
-      trazidas por imports resolvidos e desenha as sub-tabelas (Pacotes,
-      Classes, Relações internas, Datatypes, Enums, Gensets, Relações
-      externas) via `table_printer`.
+    * `reporter.py`: apresentação da fase semântica — só a lista de erros
+      semânticos (`print_semantic_errors`), paralelo aos reporters léxico e
+      sintático.
 
 * `tonto_examples/` (Diretório)
 
@@ -226,39 +261,53 @@ tonto-compilador/
 ### <a name="como-as-pecas-se-conectam"></a> Como as peças se conectam
 
 ```
-                       tonto_examples/*.tonto
-                                 │
-                                 ▼
-                       main.py (orquestrador)
-                   ┌─────────────┴──────────────┐
-                   ▼                            ▼
-       [--lexic]  analyzer.py        [--syntax]  parser.py
-                  (fachada léxica)               (monta o parser PLY,
-                   │                              resolve imports)
-                   ▼                              │          │
-            lexer_rules.py                        ▼          ▼
-                   │                     grammar_rules.py  error_handling.py
-                   ▼                           │  (ações chamam)
-      token_definitions.py /                    ▼
-         token_types.py             semantic_actions.py ──► symbol_table.py / symbol.py
-                   │                            │
-                   │                            ▼ (constrói)
-                   │                     ast_nodes.py (Program/Package/...)
-                   ▼                            ▼
-       lexico_analyzer/reporter.py   syntax_analyzer/reporter.py
-                   │                            │
-                   └─────────────┬──────────────┘
-                                  ▼
-                           table_printer.py
-                                  │
-                                  ▼
-                           saída no terminal
+                               tonto_examples/*.tonto
+                                        │
+                                        ▼
+                              main.py (orquestrador)
+                       ┌────────────────┴────────────────┐
+                       ▼                                 ▼
+             [--lexic] lexico_analyzer         [--syntax] syntax_analyzer + semantic_analyzer
+             ┌─────────────────────┐           ┌──────────────────────────────────────────┐
+             │ lexer_rules.py      │           │ parser.py monta o parser PLY a partir de  │
+             │   ▲                 │           │ grammar_rules.py e liga error_handling.py │
+             │   │                 │           │                 │                         │
+             │ token_definitions/  │           │                 ▼ (ações chamam)          │
+             │ token_types.py      │           │ grammar_rules.py ──► semantic_actions.py   │
+             │   │                 │           │                      (semantic_analyzer)   │
+             │   ▼                 │           │                       │        │           │
+             │ reporter.py         │           │                       ▼        ▼ (constrói) │
+             └─────────┬───────────┘           │     symbol_table.py/symbol.py  ast_nodes.py │
+                       │                       │              ▲                              │
+                       │                       │              │ (declara símbolos importados)│
+                       │                       │     imports.py (semantic_analyzer)           │
+                       │                       │       resolve quais import <Nome> casam com  │
+                       │                       │       quais package <Nome> vizinhos, chamando│
+                       │                       │       parser.py::_parse_file_isolated passado│
+                       │                       │       como parâmetro (sem import circular)   │
+                       │                       │              │                               │
+                       │                       │              ▼                               │
+                       │                       │  syntax_analyzer/reporter.py (tabela de       │
+                       │                       │  síntese) + semantic_analyzer/reporter.py     │
+                       │                       │  (erros semânticos)                           │
+                       │                       └──────────────────┬─────────────────────────────┘
+                       └──────────────────────────┬────────────────┘
+                                                    ▼
+                                             table_printer.py
+                                                    │
+                                                    ▼
+                                             saída no terminal
 ```
 
-A dependência anda sempre em uma direção só: a apresentação não conhece o PLY,
-a gramática/ações semânticas não conhecem o reporter, e as definições da
-linguagem não conhecem quem as usa. `table_printer.py` é o ponto onde as duas
-fases convergem antes de chegar ao terminal.
+Dentro de cada pacote a dependência anda em uma única direção: a apresentação
+não conhece o PLY, a gramática não conhece o reporter, e as definições da
+linguagem não conhecem quem as usa. Entre pacotes, `syntax_analyzer` depende
+de `semantic_analyzer` (gramática e parser chamam o motor semântico e a
+resolução de imports) e a única dependência no sentido contrário é
+`semantic_analyzer/imports.py` lendo os *tipos* de `ast_nodes.py` — que são
+só dados (dataclasses), não lógica — para decidir a categoria de cada
+declaração importada; isso não chega a ser um ciclo real. `table_printer.py`
+é o ponto onde as três fases convergem antes de chegar ao terminal.
 
 # <a name="instalacao"></a> Instalação
 
@@ -453,8 +502,8 @@ Um `import` que não encontra um arquivo `.tonto` vizinho com o
 | `CARDINALITY` | `[1]`, `[0..*]`, `[1..*]` |
 | Símbolos especiais | `{`, `}`, `(`, `)`, `.`, `,`, `+`, `<`, `>`, `@`, `-`, `*`, `:` |
 
-Além dos tokens acima, o Analisador Sintático/Semântico reconhece as
-seguintes construções e verificações:
+Além dos tokens acima, o Analisador Sintático e o Analisador Semântico
+reconhecem, juntos, as seguintes construções e verificações:
 
 | Construção / Verificação | Descrição |
 |---|---|
