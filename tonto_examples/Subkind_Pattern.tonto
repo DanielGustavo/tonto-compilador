@@ -1,0 +1,49 @@
+package SubkindPattern
+
+//=============================================
+// VARIANTE 1: subkind especializando um sortal rígido
+kind Animal
+subkind Mamifero specializes Animal
+
+//=============================================
+// VARIANTE 2: genset disjoint e complete de subkinds
+kind Ser_Vivo
+subkind Ave specializes Ser_Vivo
+subkind Peixe specializes Ser_Vivo
+
+disjoint complete genset Tipos_De_Ser_Vivo {
+    general Ser_Vivo
+    specifics Ave, Peixe
+}
+
+//=============================================
+// COERÇÃO: kind que especializa um sortal rígido vira subkind
+kind Veiculo
+kind Carro specializes Veiculo
+
+//=============================================
+// DEDUÇÃO: Agua não declara specializes, mas é agrupada pelo genset
+kind Elemento
+subkind Agua
+subkind Fogo specializes Elemento
+
+disjoint complete genset Estados_Da_Materia {
+    general Elemento
+    specifics Agua, Fogo
+}
+
+//=============================================
+// ERRO: subkind especializando um pai anti-rígido (role)
+role Papel
+subkind Errado specializes Papel
+
+//=============================================
+// ERRO: genset de subkinds declarado como overlapping
+kind Genero
+subkind Masculino specializes Genero
+subkind Feminino specializes Genero
+
+overlapping genset Generos {
+    general Genero
+    specifics Masculino, Feminino
+}

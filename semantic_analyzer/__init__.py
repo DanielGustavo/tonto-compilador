@@ -11,7 +11,8 @@ didática do pacote (na ordem em que as peças colaboram):
 5. `imports`            -> a resolução de `import <Nome>` entre arquivos
                            `.tonto`, que declara os símbolos importados via
                            `semantic_actions`;
-6. `reporter`           -> como a lista de `SemanticError` é apresentada.
+6. `reporter`           -> como a lista de `SemanticError` é apresentada;
+7. `patterns`           -> análise de padrões de projeto sobre a AST
 
 `syntax_analyzer` é quem chama este pacote: `grammar_rules.py` e
 `error_handling.py` importam `semantic_actions` diretamente, e `parser.py`

@@ -29,6 +29,11 @@ from syntax_analyzer import ast_nodes
 from syntax_analyzer.parser import analisar_arquivo as analisar_sintaticamente
 from syntax_analyzer.reporter import print_syntax_errors, print_tabela_sintese
 
+from semantic_analyzer.patterns import (
+  analyze_patterns,
+  print_pattern_report,
+)
+
 PASTA_DE_EXEMPLOS = Path(__file__).parent / "tonto_examples"
 MODOS = {"--lexic": "lexic", "--syntax": "syntax"}
 
@@ -122,6 +127,9 @@ def executar_analise_sintatica(caminho: Path) -> tuple[list, list, list]:
 
   if isinstance(node, ast_nodes.Program) and node.package:
     print_tabela_sintese(node.package, declaracoes_importadas)
+
+    pattern_report = analyze_patterns(node, declaracoes_importadas)
+    print_pattern_report(pattern_report)
 
   return erros_lexicos, erros_sintaticos, erros_semanticos
 
