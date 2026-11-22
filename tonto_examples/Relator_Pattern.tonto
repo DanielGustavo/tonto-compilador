@@ -1,0 +1,101 @@
+package RelatorPattern
+
+//=============================================
+// VARIANTE 1: relator medeia dois universais substanciais sem material
+kind Pessoa
+kind Empresa
+
+relator Contratacao {
+    @mediation [1..*] -- [1..*] Empresa
+    @mediation [1..*] -- [1..*] Pessoa
+}
+
+//=============================================
+// VARIANTE 2: relator + material entre os mediados
+kind Marido
+kind Esposa
+
+@material relation Marido [1..*] -- casado_Com -- [1..*] Esposa
+
+relator Casamento {
+    @mediation [1..*] -- [1..*] Marido
+    @mediation [1..*] -- [1..*] Esposa
+}
+
+//=============================================
+// VARIANTE 2: três mediados e três materials
+kind Comprador
+kind Vendedor
+kind Produto
+
+@material relation Comprador [1..*] -- negocia_Com -- [1..*] Vendedor
+@material relation Vendedor [1..*] -- oferece -- [1..*] Produto
+@material relation Comprador [1..*] -- adquire -- [1..*] Produto
+
+relator Negociacao {
+    @mediation [1..*] -- [1..*] Comprador
+    @mediation [1..*] -- [1..*] Vendedor
+    @mediation [1..*] -- [1..*] Produto
+}
+
+//=============================================
+// COERÇÃO kind -> relator: kind com duas mediações no corpo
+kind Aluno
+kind Curso
+
+kind Matricula {
+    @mediation [1..*] -- [1..*] Aluno
+    @mediation [1..*] -- [1..*] Curso
+}
+
+//=============================================
+// COERÇÃO @material -> @mediation: material entre relator e universal substancial
+kind Vendedor_De_Compra
+
+relator Compra {
+    @mediation [1..*] -- [1..*] Vendedor_De_Compra
+}
+
+@material relation Compra [1..*] -- [1..*] Comprador
+
+//=============================================
+// DEDUÇÃO: relator incompleto, mediation apenas com um universal substancial
+kind Animal
+
+relator Cuidado {
+    @mediation [1..*] -- [1..*] Animal
+}
+
+//=============================================
+// DEDUÇÃO: mediação faltante deduzida de um material
+kind Medico
+kind Paciente
+
+@material relation Medico [1..*] -- atende -- [1..*] Paciente
+
+relator Consulta {
+    @mediation [1..*] -- [1..*] Medico
+}
+
+//=============================================
+// ERRO: mediação para um mode (não é universal substancial)
+kind Paciente_De_Avaliacao
+kind Doente
+mode Sintoma
+
+relator Avaliacao {
+    @mediation [1..*] -- [1..*] Paciente_De_Avaliacao
+    @mediation [1..*] -- [1..*] Doente
+    @mediation [1..*] -- [1..*] Sintoma
+}
+
+//=============================================
+// ERRO: relator tem mediation com ele mesmo
+kind Fonte_A
+kind Fonte_B
+
+relator Reflexivo {
+    @mediation [1..*] -- [1..*] Fonte_A
+    @mediation [1..*] -- [1..*] Fonte_B
+    @mediation [1..*] -- [1..*] Reflexivo
+}

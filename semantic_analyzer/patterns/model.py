@@ -93,6 +93,16 @@ class PhaseMatch:
   deduced: bool = False
 
 
+@dataclass(frozen=True)
+class RelatorMatch:
+  variant: int
+  relator: ElementRef
+  mediated: tuple[ElementRef, ...]
+  materials: tuple[ElementRef, ...]
+  lines: tuple[int, ...]
+  deduced: bool = False
+
+
 @dataclass
 class SubkindReport:
   matches: list[SubkindMatch]
@@ -118,7 +128,16 @@ class RoleReport:
 
 
 @dataclass
+class RelatorReport:
+  matches: list[RelatorMatch]
+  coercions: list[PatternDiagnostic]
+  deductions: list[PatternDiagnostic]
+  errors: list[PatternDiagnostic]
+
+
+@dataclass
 class PatternReport:
   subkind: SubkindReport
   phase: PhaseReport
   role: RoleReport
+  relator: RelatorReport
