@@ -1,0 +1,106 @@
+package PhasePattern
+
+//=============================================
+// PARTIÇÃO VÁLIDA: phases disjoint e complete de um kind
+kind Pessoa
+phase Crianca specializes Pessoa
+phase Adulto specializes Pessoa
+phase Jovem specializes Pessoa
+
+disjoint complete genset Fases_Da_Pessoa {
+    general Pessoa
+    specifics Crianca, Adulto, Jovem
+}
+
+//=============================================
+// PARTIÇÃO ANINHADA: general é uma phase
+phase Adolescente specializes Jovem
+phase Adulto_Jovem specializes Jovem
+
+disjoint complete genset Fases_De_Jovem {
+    general Jovem
+    specifics Adolescente, Adulto_Jovem
+}
+
+//=============================================
+// PARTIÇÃO VÁLIDA: 'complete' é opcional
+kind Cliente
+phase Ativo specializes Cliente
+phase Inativo specializes Cliente
+
+disjoint genset Situacao_Do_Cliente {
+    general Cliente
+    specifics Ativo, Inativo
+}
+
+//=============================================
+// PARTIÇÃO VÁLIDA: 'complete' é opcional
+kind Pedido
+phase Aberto specializes Pedido
+phase Fechado specializes Pedido
+
+disjoint incomplete genset Situacao_Do_Pedido {
+    general Pedido
+    specifics Aberto, Fechado
+}
+
+//=============================================
+// DEDUÇÃO: fase sem 'specializes', descoberta pelo genset
+kind Elemento
+phase Solido
+phase Liquido specializes Elemento
+
+disjoint complete genset Estados_Fisicos {
+    general Elemento
+    specifics Solido, Liquido
+}
+
+//=============================================
+// DEDUÇÃO: fases irmãs sem genset (partição incompleta)
+kind Animal
+phase Filhote specializes Animal
+phase Adulto_Animal specializes Animal
+
+//=============================================
+// COERÇÃO: subkind sob uma phase vira phase
+kind Contrato
+phase Vigente specializes Contrato
+phase Encerrado specializes Contrato
+
+disjoint complete genset Estados_Do_Contrato {
+    general Contrato
+    specifics Vigente, Encerrado
+}
+
+subkind Em_Renovacao specializes Vigente
+
+//=============================================
+// ERRO: genset de fases sem 'disjoint'
+kind Genero
+phase Masculino specializes Genero
+phase Feminino specializes Genero
+
+complete genset Generos {
+    general Genero
+    specifics Masculino, Feminino
+}
+
+//=============================================
+// ERRO: genset de fases declarado 'overlapping'
+kind Nivel
+phase Baixo specializes Nivel
+phase Alto specializes Nivel
+
+overlapping complete genset Niveis {
+    general Nivel
+    specifics Baixo, Alto
+}
+
+//=============================================
+// ERRO: phase com general inválido (mode)
+mode Sintoma
+phase Agudo specializes Sintoma
+
+//=============================================
+// ERRO: phase sem general
+phase Solto

@@ -3,6 +3,7 @@ from table_printer import print_table
 from .model import (
   PatternDiagnostic,
   PatternReport,
+  PhaseMatch,
   RoleMatch,
   SubkindMatch,
 )
@@ -12,6 +13,19 @@ def _origins(match: SubkindMatch) -> str:
   origins: list[str] = []
 
   for ref in (*match.generals, *match.specifics):
+    if ref.origin and ref.origin not in origins:
+      origins.append(ref.origin)
+
+  if match.genset is not None and match.genset.origin not in origins:
+    origins.append(match.genset.origin)
+
+  return ", ".join(origins) if origins else "-"
+
+
+def _phase_origins(match: PhaseMatch) -> str:
+  origins: list[str] = []
+
+  for ref in (match.general, *match.specifics):
     if ref.origin and ref.origin not in origins:
       origins.append(ref.origin)
 
@@ -34,7 +48,7 @@ def _role_origins(match: RoleMatch) -> str:
   return ", ".join(origins) if origins else "-"
 
 
-def _format_genset(match: SubkindMatch) -> str:
+def _format_genset(match: SubkindMatch | PhaseMatch) -> str:
   if match.genset is None:
     return "-"
 
@@ -57,6 +71,7 @@ def _print_diagnostic(diagnostic: PatternDiagnostic) -> None:
 
 def print_pattern_report(report: PatternReport) -> None:
   subkind = report.subkind
+  phase = report.phase
   role = report.role
 
   print("\n============ PADRÕES DE PROJETO ============")
@@ -83,6 +98,26 @@ def print_pattern_report(report: PatternReport) -> None:
     )
   else:
     print("  Nenhum padrão Subkind encontrado.")
+
+  if phase.matches:
+    ordered_phases = sorted(phase.matches, key=lambda match: match.lines)
+    print_table(
+      "Padrões Phase",
+      ("General", "Fases", "Genset", "Pacote", "Linhas"),
+      [
+        (
+          match.general.name,
+          ", ".join(ref.name for ref in match.specifics),
+          _format_genset(match),
+          _phase_origins(match),
+          ", ".join(str(line) for line in match.lines),
+        )
+        for match in ordered_phases
+      ],
+      indent="  ",
+    )
+  else:
+    print("  Nenhum padrão Phase encontrado.")
 
   if role.matches:
     ordered_roles = sorted(role.matches, key=lambda match: match.lines)
@@ -111,11 +146,15 @@ def print_pattern_report(report: PatternReport) -> None:
     for coercion in subkind.coercions:
       _print_diagnostic(coercion)
 
+  if phase.coercions:
+    for coercion in phase.coercions:
+      _print_diagnostic(coercion)
+
   if role.coercions:
     for coercion in role.coercions:
       _print_diagnostic(coercion)
 
-  if not subkind.coercions and not role.coercions:
+  if not subkind.coercions and not phase.coercions and not role.coercions:
     print("  Nenhuma coerção encontrada.")
 
   print("\n  Erros de padrão não coercíveis:")
@@ -124,11 +163,15 @@ def print_pattern_report(report: PatternReport) -> None:
     for error in subkind.errors:
       _print_diagnostic(error)
 
+  if phase.errors:
+    for error in phase.errors:
+      _print_diagnostic(error)
+
   if role.errors:
     for error in role.errors:
       _print_diagnostic(error)
 
-  if not subkind.errors and not role.errors:
+  if not subkind.errors and not phase.errors and not role.errors:
     print("  Nenhum erro de padrão encontrado.")
 
   print("\n(3) PADRÕES INCOMPLETOS DEDUZIDOS POR SOBRECARGA")
@@ -137,9 +180,13 @@ def print_pattern_report(report: PatternReport) -> None:
     for deduction in subkind.deductions:
       _print_diagnostic(deduction)
 
+  if phase.deductions:
+    for deduction in phase.deductions:
+      _print_diagnostic(deduction)
+
   if role.deductions:
     for deduction in role.deductions:
       _print_diagnostic(deduction)
 
-  if not subkind.deductions and not role.deductions:
+  if not subkind.deductions and not phase.deductions and not role.deductions:
     print("  Nenhum padrão incompleto deduzido.")

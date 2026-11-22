@@ -82,9 +82,28 @@ class RoleMatch:
   deduced: bool = False
 
 
+@dataclass(frozen=True)
+class PhaseMatch:
+  general: ElementRef
+  specifics: tuple[ElementRef, ...]
+  genset: ElementRef | None
+  lines: tuple[int, ...]
+  disjointness: str | None = None
+  completeness: str | None = None
+  deduced: bool = False
+
+
 @dataclass
 class SubkindReport:
   matches: list[SubkindMatch]
+  coercions: list[PatternDiagnostic]
+  deductions: list[PatternDiagnostic]
+  errors: list[PatternDiagnostic]
+
+
+@dataclass
+class PhaseReport:
+  matches: list[PhaseMatch]
   coercions: list[PatternDiagnostic]
   deductions: list[PatternDiagnostic]
   errors: list[PatternDiagnostic]
@@ -101,4 +120,5 @@ class RoleReport:
 @dataclass
 class PatternReport:
   subkind: SubkindReport
+  phase: PhaseReport
   role: RoleReport
