@@ -1,12 +1,30 @@
 from table_printer import print_table
 
-from .model import PatternDiagnostic, PatternReport, SubkindMatch
+from .model import (
+  PatternDiagnostic,
+  PatternReport,
+  RoleMatch,
+  SubkindMatch,
+)
 
 
 def _origins(match: SubkindMatch) -> str:
   origins: list[str] = []
 
   for ref in (*match.generals, *match.specifics):
+    if ref.origin and ref.origin not in origins:
+      origins.append(ref.origin)
+
+  if match.genset is not None and match.genset.origin not in origins:
+    origins.append(match.genset.origin)
+
+  return ", ".join(origins) if origins else "-"
+
+
+def _role_origins(match: RoleMatch) -> str:
+  origins: list[str] = []
+
+  for ref in (match.role, *match.generals, *match.relators):
     if ref.origin and ref.origin not in origins:
       origins.append(ref.origin)
 
@@ -39,6 +57,7 @@ def _print_diagnostic(diagnostic: PatternDiagnostic) -> None:
 
 def print_pattern_report(report: PatternReport) -> None:
   subkind = report.subkind
+  role = report.role
 
   print("\n============ PADRÕES DE PROJETO ============")
 
@@ -65,26 +84,62 @@ def print_pattern_report(report: PatternReport) -> None:
   else:
     print("  Nenhum padrão Subkind encontrado.")
 
+  if role.matches:
+    ordered_roles = sorted(role.matches, key=lambda match: match.lines)
+    print_table(
+      "Padrões Role",
+      ("Papel", "General", "Relator(es)", "Genset", "Pacote", "Linhas"),
+      [
+        (
+          match.role.name,
+          ", ".join(ref.name for ref in match.generals),
+          ", ".join(ref.name for ref in match.relators) or "-",
+          match.genset.name if match.genset is not None else "-",
+          _role_origins(match),
+          ", ".join(str(line) for line in match.lines),
+        )
+        for match in ordered_roles
+      ],
+      indent="  ",
+    )
+  else:
+    print("  Nenhum padrão Role encontrado.")
+
   print("\n(2) ERROS A SEREM CORRIGIDOS POR COERÇÃO")
 
   if subkind.coercions:
     for coercion in subkind.coercions:
       _print_diagnostic(coercion)
-  else:
-    print("  Nenhuma coerção de Subkind encontrada.")
+
+  if role.coercions:
+    for coercion in role.coercions:
+      _print_diagnostic(coercion)
+
+  if not subkind.coercions and not role.coercions:
+    print("  Nenhuma coerção encontrada.")
 
   print("\n  Erros de padrão não coercíveis:")
 
   if subkind.errors:
     for error in subkind.errors:
       _print_diagnostic(error)
-  else:
-    print("  Nenhum erro de padrão Subkind encontrado.")
+
+  if role.errors:
+    for error in role.errors:
+      _print_diagnostic(error)
+
+  if not subkind.errors and not role.errors:
+    print("  Nenhum erro de padrão encontrado.")
 
   print("\n(3) PADRÕES INCOMPLETOS DEDUZIDOS POR SOBRECARGA")
 
   if subkind.deductions:
     for deduction in subkind.deductions:
       _print_diagnostic(deduction)
-  else:
-    print("  Nenhum padrão Subkind incompleto deduzido.")
+
+  if role.deductions:
+    for deduction in role.deductions:
+      _print_diagnostic(deduction)
+
+  if not subkind.deductions and not role.deductions:
+    print("  Nenhum padrão incompleto deduzido.")

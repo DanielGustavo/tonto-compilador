@@ -12,7 +12,7 @@ from semantic_analyzer import semantic_actions
 from semantic_analyzer.symbol import SymbolCategory
 
 from . import ast_nodes
-from .error_handling import p_error
+from .error_handling import p_error as p_error
 
 tokens = lexer_rules.tokens
 start = "program"

@@ -13,10 +13,14 @@ from .model import (
   GensetInfo,
   PatternDiagnostic,
   PatternReport,
+  RelationInfo,
+  RoleMatch,
+  RoleReport,
   SubkindMatch,
   SubkindReport,
 )
 from .reporter import print_pattern_report
+from .role import analyze_role_patterns
 from .subkind import analyze_subkind_patterns
 
 __all__ = [
@@ -26,9 +30,13 @@ __all__ = [
   "OntologyIndex",
   "PatternDiagnostic",
   "PatternReport",
+  "RelationInfo",
+  "RoleMatch",
+  "RoleReport",
   "SubkindMatch",
   "SubkindReport",
   "analyze_patterns",
+  "analyze_role_patterns",
   "analyze_subkind_patterns",
   "build_index",
   "print_pattern_report",
@@ -41,4 +49,7 @@ def analyze_patterns(
 ) -> PatternReport:
   index = build_index(program, imported)
 
-  return PatternReport(subkind=analyze_subkind_patterns(index))
+  return PatternReport(
+    subkind=analyze_subkind_patterns(index),
+    role=analyze_role_patterns(index),
+  )

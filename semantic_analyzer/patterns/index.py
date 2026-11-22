@@ -7,14 +7,16 @@ from dataclasses import dataclass, field
 
 from syntax_analyzer import ast_nodes
 
-from .model import ClassInfo, GensetInfo
+from .model import ClassInfo, GensetInfo, RelationInfo
 
 
+# `field` é necessário para criar objetos novos a cada instância do dataclass
 @dataclass
 class OntologyIndex:
   package_name: str
   classes: dict[str, ClassInfo] = field(default_factory=dict)
   gensets: list[GensetInfo] = field(default_factory=list)
+  relations: list[RelationInfo] = field(default_factory=list)
 
 
 def build_index(
@@ -23,6 +25,23 @@ def build_index(
 ) -> OntologyIndex:
   package_name = program.package.name if program.package is not None else ""
   index = OntologyIndex(package_name=package_name)
+
+  def add_relation(node: ast_nodes.Relation, origin: str, owner: str | None) -> None:
+    index.relations.append(
+      RelationInfo(
+        name=node.name,
+        stereotype=node.stereotype,
+        source=node.source,
+        target=node.target,
+        source_cardinality=node.source_cardinality,
+        target_cardinality=node.target_cardinality,
+        owner=owner,
+        symbol=node.symbol,
+        line=node.line,
+        column=node.column,
+        origin=origin,
+      )
+    )
 
   def add_class(node: ast_nodes.ClassDeclaration, origin: str) -> None:
     if not node.name or node.name in index.classes:
@@ -37,6 +56,10 @@ def build_index(
       column=node.column,
       origin=origin,
     )
+
+    for member in node.members:
+      if isinstance(member, ast_nodes.Relation):
+        add_relation(member, origin, node.name)
 
   def add_genset(node: ast_nodes.GeneralizationSet, origin: str) -> None:
     if not node.name:
@@ -60,6 +83,8 @@ def build_index(
       add_class(node, origin)
     elif isinstance(node, ast_nodes.GeneralizationSet):
       add_genset(node, origin)
+    elif isinstance(node, ast_nodes.Relation):
+      add_relation(node, origin, None)
 
   if program.package is not None:
     for declaration in program.package.declarations:

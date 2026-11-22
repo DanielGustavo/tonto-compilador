@@ -35,6 +35,21 @@ class ElementRef:
 
 
 @dataclass(frozen=True)
+class RelationInfo:
+  name: str | None
+  stereotype: str
+  source: str | None
+  target: str
+  source_cardinality: str | None
+  target_cardinality: str | None
+  owner: str | None
+  symbol: str
+  line: int
+  column: int
+  origin: str
+
+
+@dataclass(frozen=True)
 class SubkindMatch:
   variant: int
   generals: tuple[ElementRef, ...]
@@ -57,6 +72,16 @@ class PatternDiagnostic:
   suggestion: str | None = None
 
 
+@dataclass(frozen=True)
+class RoleMatch:
+  role: ElementRef
+  generals: tuple[ElementRef, ...]
+  relators: tuple[ElementRef, ...]
+  genset: ElementRef | None
+  lines: tuple[int, ...]
+  deduced: bool = False
+
+
 @dataclass
 class SubkindReport:
   matches: list[SubkindMatch]
@@ -66,5 +91,14 @@ class SubkindReport:
 
 
 @dataclass
+class RoleReport:
+  matches: list[RoleMatch]
+  coercions: list[PatternDiagnostic]
+  deductions: list[PatternDiagnostic]
+  errors: list[PatternDiagnostic]
+
+
+@dataclass
 class PatternReport:
   subkind: SubkindReport
+  role: RoleReport

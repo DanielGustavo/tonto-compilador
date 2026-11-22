@@ -423,7 +423,10 @@ def _variant_one(
       errors.append(
         _diagnostic(
           "error",
-          (f"subkind '{info.name}' não alcança um kind/collective"),
+          (
+            f"subkind '{info.name}' não alcança um kind/collective "
+            "provedor de identidade."
+          ),
           info,
           (
             f"faça '{info.name}' especializar direta ou indiretamente um "
