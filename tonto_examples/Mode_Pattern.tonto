@@ -1,0 +1,68 @@
+package ModePattern
+
+//=============================================
+// VÁLIDO: mode com caracterização para um kind
+kind Pessoa
+
+mode Sintoma {
+    @characterization [1] -- [1] Pessoa
+}
+
+//=============================================
+// VÁLIDO: mode com relação de dependência
+kind Animal
+
+mode Habilidade {
+    @inherence [1] -- [1] Animal
+}
+
+//=============================================
+// VÁLIDO: mode intrínseco
+kind Veiculo
+
+intrisicMode Cor {
+    @characterization [1] -- [1] Veiculo
+}
+
+//=============================================
+// VÁLIDO: mode com dependência externa opcional
+kind Medico
+kind Paciente
+
+mode Crenca {
+    @characterization [1] -- [1] Medico
+    @externalDependence [1] -- [1] Paciente
+}
+
+//=============================================
+// VÁLIDO: dependência declarada do portador para o mode
+kind Estudante
+mode Conhecimento
+
+@characterization relation Estudante [1] -- [1] Conhecimento
+
+//=============================================
+// COERÇÃO: kind com caracterização vira mode
+kind Pessoa_Fisica
+
+kind Doenca {
+    @characterization [1] -- [1] Pessoa_Fisica
+}
+
+//=============================================
+// DEDUÇÃO: mode sem portador
+mode Solitario
+
+//=============================================
+// ERRO: mode depende dele mesmo
+mode Reflexivo {
+    @characterization [1] -- [1] Reflexivo
+}
+
+//=============================================
+// ERRO: mode depende de um event
+event Festa
+
+mode Alegria {
+    @characterization [1] -- [1] Festa
+}

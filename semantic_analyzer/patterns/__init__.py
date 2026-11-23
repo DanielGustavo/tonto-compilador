@@ -7,10 +7,13 @@ a fachada usada pelo `main.py`.
 from syntax_analyzer import ast_nodes
 
 from .index import OntologyIndex, build_index
+from .mode import analyze_mode_patterns
 from .model import (
   ClassInfo,
   ElementRef,
   GensetInfo,
+  ModeMatch,
+  ModeReport,
   PatternDiagnostic,
   PatternReport,
   PhaseMatch,
@@ -33,6 +36,8 @@ __all__ = [
   "ClassInfo",
   "ElementRef",
   "GensetInfo",
+  "ModeMatch",
+  "ModeReport",
   "OntologyIndex",
   "PatternDiagnostic",
   "PatternReport",
@@ -45,6 +50,7 @@ __all__ = [
   "RoleReport",
   "SubkindMatch",
   "SubkindReport",
+  "analyze_mode_patterns",
   "analyze_patterns",
   "analyze_phase_patterns",
   "analyze_relator_patterns",
@@ -69,6 +75,10 @@ def analyze_patterns(
   # classes com general não seja sobrescrita pela coerção kind -> relator.
   subkind = analyze_subkind_patterns(index)
 
+  # O mode roda antes do relator para que um kind coercido para mode deixe de
+  # ser aceito como universal substancial
+  mode = analyze_mode_patterns(index)
+
   # O relator roda antes do role para que a coerção kind -> relator já esteja
   # aplicada quando o Role procurar as mediações.
   relator = analyze_relator_patterns(index)
@@ -78,4 +88,5 @@ def analyze_patterns(
     phase=phase,
     relator=relator,
     role=analyze_role_patterns(index),
+    mode=mode,
   )

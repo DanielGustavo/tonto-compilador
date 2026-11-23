@@ -1,6 +1,7 @@
 from table_printer import print_table
 
 from .model import (
+  ModeMatch,
   PatternDiagnostic,
   PatternReport,
   PhaseMatch,
@@ -59,6 +60,16 @@ def _relator_origins(match: RelatorMatch) -> str:
   return ", ".join(origins) if origins else "-"
 
 
+def _mode_origins(match: ModeMatch) -> str:
+  origins: list[str] = []
+
+  for ref in (match.mode, *match.hosts, *match.external_dependencies):
+    if ref.origin and ref.origin not in origins:
+      origins.append(ref.origin)
+
+  return ", ".join(origins) if origins else "-"
+
+
 def _format_genset(match: SubkindMatch | PhaseMatch) -> str:
   if match.genset is None:
     return "-"
@@ -85,6 +96,7 @@ def print_pattern_report(report: PatternReport) -> None:
   phase = report.phase
   role = report.role
   relator = report.relator
+  mode = report.mode
 
   print("\n============ PADRÕES DE PROJETO ============")
 
@@ -173,6 +185,26 @@ def print_pattern_report(report: PatternReport) -> None:
   else:
     print("  Nenhum padrão Relator encontrado.")
 
+  if mode.matches:
+    ordered_modes = sorted(mode.matches, key=lambda match: match.lines)
+    print_table(
+      "Padrões Mode",
+      ("Mode", "Portador(es)", "Dependências externas", "Pacote", "Linhas"),
+      [
+        (
+          match.mode.name,
+          ", ".join(ref.name for ref in match.hosts),
+          ", ".join(ref.name for ref in match.external_dependencies) or "-",
+          _mode_origins(match),
+          ", ".join(str(line) for line in match.lines),
+        )
+        for match in ordered_modes
+      ],
+      indent="  ",
+    )
+  else:
+    print("  Nenhum padrão Mode encontrado.")
+
   print("\n(2) ERROS A SEREM CORRIGIDOS POR COERÇÃO")
 
   if subkind.coercions:
@@ -191,11 +223,16 @@ def print_pattern_report(report: PatternReport) -> None:
     for coercion in relator.coercions:
       _print_diagnostic(coercion)
 
+  if mode.coercions:
+    for coercion in mode.coercions:
+      _print_diagnostic(coercion)
+
   if (
     not subkind.coercions
     and not phase.coercions
     and not role.coercions
     and not relator.coercions
+    and not mode.coercions
   ):
     print("  Nenhuma coerção encontrada.")
 
@@ -217,11 +254,16 @@ def print_pattern_report(report: PatternReport) -> None:
     for error in relator.errors:
       _print_diagnostic(error)
 
+  if mode.errors:
+    for error in mode.errors:
+      _print_diagnostic(error)
+
   if (
     not subkind.errors
     and not phase.errors
     and not role.errors
     and not relator.errors
+    and not mode.errors
   ):
     print("  Nenhum erro de padrão encontrado.")
 
@@ -243,10 +285,15 @@ def print_pattern_report(report: PatternReport) -> None:
     for deduction in relator.deductions:
       _print_diagnostic(deduction)
 
+  if mode.deductions:
+    for deduction in mode.deductions:
+      _print_diagnostic(deduction)
+
   if (
     not subkind.deductions
     and not phase.deductions
     and not role.deductions
     and not relator.deductions
+    and not mode.deductions
   ):
     print("  Nenhum padrão incompleto deduzido.")

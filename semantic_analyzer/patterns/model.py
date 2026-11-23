@@ -103,6 +103,15 @@ class RelatorMatch:
   deduced: bool = False
 
 
+@dataclass(frozen=True)
+class ModeMatch:
+  mode: ElementRef
+  hosts: tuple[ElementRef, ...]
+  external_dependencies: tuple[ElementRef, ...]
+  lines: tuple[int, ...]
+  deduced: bool = False
+
+
 @dataclass
 class SubkindReport:
   matches: list[SubkindMatch]
@@ -136,8 +145,17 @@ class RelatorReport:
 
 
 @dataclass
+class ModeReport:
+  matches: list[ModeMatch]
+  coercions: list[PatternDiagnostic]
+  deductions: list[PatternDiagnostic]
+  errors: list[PatternDiagnostic]
+
+
+@dataclass
 class PatternReport:
   subkind: SubkindReport
   phase: PhaseReport
   role: RoleReport
   relator: RelatorReport
+  mode: ModeReport
