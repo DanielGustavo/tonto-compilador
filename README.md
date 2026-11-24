@@ -32,7 +32,7 @@ A automação parcial é feita com **PLY** (versão Python do LEX/YACC).
 ```
 tonto-compilador/
 │
-├── main.py                        (ponto de entrada / orquestrador: CLI --lexic/--syntax)
+├── main.py                        (ponto de entrada / orquestrador: CLI --lexic/--syntax/--semantic)
 ├── table_printer.py                (utilitário de tabelas, usado pelos dois reporters)
 ├── README.md
 ├── requirements.txt               (dependências do projeto)
@@ -85,8 +85,8 @@ tonto-compilador/
 * `main.py`
 
     * Ponto de entrada e "orquestrador" do compilador. Resolve o modo
-      (`--lexic`, `--syntax`, ou nenhum dos dois — e então roda as duas
-      fases) e o arquivo de entrada (por argumento na linha de comando ou
+      (`--lexic`, `--syntax`, `--semantic`, ou nenhum deles — e então roda as
+      três fases) e o arquivo de entrada (por argumento na linha de comando ou
       pelo menu de exemplos), chama o(s) analisador(es) correspondente(s) e
       entrega o resultado aos módulos de apresentação. Todos os erros
       acumulados (léxicos, sintáticos e semânticos) só são impressos juntos
@@ -267,7 +267,8 @@ tonto-compilador/
                               main.py (orquestrador)
                        ┌────────────────┴────────────────┐
                        ▼                                 ▼
-             [--lexic] lexico_analyzer         [--syntax] syntax_analyzer + semantic_analyzer
+             [--lexic] lexico_analyzer   [--syntax] syntax_analyzer + semantic_analyzer
+                                         [--semantic] semantic_analyzer/patterns
              ┌─────────────────────┐           ┌──────────────────────────────────────────┐
              │ lexer_rules.py      │           │ parser.py monta o parser PLY a partir de  │
              │   ▲                 │           │ grammar_rules.py e liga error_handling.py │
@@ -327,14 +328,14 @@ pip install -r requirements.txt
 
 # <a name="como-executar"></a> Como executar
 
-Sem flag, roda as duas fases (léxica e sintática/semântica) em sequência,
+Sem flag, roda as três fases (léxica, sintática e semântica) em sequência,
 no modo interativo com o menu de exemplos:
 
 ```bash
 python3 main.py
 ```
 
-Analisando um arquivo específico, com as duas fases:
+Analisando um arquivo específico, com as três fases:
 
 ```bash
 python3 main.py tonto_examples/Pizzaria.tonto
@@ -344,10 +345,12 @@ Rodando só uma das fases — a flag, quando usada, deve vir **antes** do
 caminho do arquivo:
 
 ```bash
-python3 main.py --lexic tonto_examples/Pizzaria.tonto   # só análise léxica
-python3 main.py --syntax tonto_examples/Pizzaria.tonto  # só análise sintática/semântica
-python3 main.py --lexic                                 # só léxica, com menu de exemplos
-python3 main.py --syntax                                # só sintática, com menu de exemplos
+python3 main.py --lexic tonto_examples/Pizzaria.tonto     # só análise léxica
+python3 main.py --syntax tonto_examples/Pizzaria.tonto    # tabela de síntese + erros
+python3 main.py --semantic tonto_examples/Pizzaria.tonto  # relatório de padrões + erros semânticos
+python3 main.py --lexic                                   # só léxica, com menu de exemplos
+python3 main.py --syntax                                  # só sintática, com menu de exemplos
+python3 main.py --semantic                                # só semântica, com menu de exemplos
 ```
 
 ### <a name="entrada-do-sistema"></a> Entrada do sistema

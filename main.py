@@ -9,8 +9,10 @@ Uso:
     python3 main.py tonto_examples/Pizzaria.tonto
     python3 main.py --lexic tonto_examples/Pizzaria.tonto
     python3 main.py --syntax tonto_examples/Pizzaria.tonto
+    python3 main.py --semantic tonto_examples/Pizzaria.tonto
     python3 main.py --lexic
     python3 main.py --syntax
+    python3 main.py --semantic
 """
 
 import sys
@@ -34,7 +36,8 @@ from syntax_analyzer.parser import analisar_arquivo as analisar_sintaticamente
 from syntax_analyzer.reporter import print_syntax_errors, print_tabela_sintese
 
 PASTA_DE_EXEMPLOS = Path(__file__).parent / "tonto_examples"
-MODOS = {"--lexic": "lexic", "--syntax": "syntax"}
+MODOS = {"--lexic": "lexic", "--syntax": "syntax", "--semantic": "semantic"}
+MODOS_PADRAO = set(MODOS.values())
 
 
 def listar_e_mapear_exemplos(pasta: Path) -> dict[str, Path] | None:
@@ -63,9 +66,9 @@ def listar_e_mapear_exemplos(pasta: Path) -> dict[str, Path] | None:
 
 def escolher_modo(argumentos):
   if argumentos and argumentos[0] in MODOS:
-    return (MODOS[argumentos[0]]), argumentos[1:]
+    return set({MODOS[argumentos[0]]}), argumentos[1:]
 
-  return MODOS.values(), argumentos
+  return MODOS_PADRAO, argumentos
 
 
 def escolher_arquivo(argumentos: list[str]) -> Path | None:
@@ -73,7 +76,7 @@ def escolher_arquivo(argumentos: list[str]) -> Path | None:
   if len(argumentos) > 1:
     print(
       f"uso: python3 {Path(__file__).name} "
-      "[--lexic|--syntax] [caminho_do_arquivo.tonto]"
+      "[--lexic|--syntax|--semantic] [caminho_do_arquivo.tonto]"
     )
     return None
 
@@ -114,23 +117,20 @@ def executar_analise_lexica(caminho: Path) -> list:
   return erros
 
 
-def executar_analise_sintatica(caminho: Path) -> tuple[list, list, list]:
-  (
-    node,
-    erros_lexicos,
-    erros_sintaticos,
-    erros_semanticos,
-    declaracoes_importadas,
-    _codigo_fonte,
-  ) = analisar_sintaticamente(caminho)
+def executar_parse(caminho: Path) -> tuple:
+  """Roda o parse (e a análise semântica) sem apresentar resultados."""
+  return analisar_sintaticamente(caminho)
 
+
+def apresentar_tabela_sintese(node, declaracoes_importadas) -> None:
   if isinstance(node, ast_nodes.Program) and node.package:
     print_tabela_sintese(node.package, declaracoes_importadas)
 
+
+def apresentar_padroes(node, declaracoes_importadas) -> None:
+  if isinstance(node, ast_nodes.Program) and node.package:
     pattern_report = analyze_patterns(node, declaracoes_importadas)
     print_pattern_report(pattern_report)
-
-  return erros_lexicos, erros_sintaticos, erros_semanticos
 
 
 def main() -> None:
@@ -147,19 +147,32 @@ def main() -> None:
   erros_lexicos = []
   erros_sintaticos = []
   erros_semanticos = []
-  rodou_sintatica = False
+  node = None
+  declaracoes_importadas = []
 
   if "lexic" in modo:
     erros_lexicos = executar_analise_lexica(caminho)
-  if "syntax" in modo:
-    erros_lexicos, erros_sintaticos, erros_semanticos = executar_analise_sintatica(
-      caminho
-    )
-    rodou_sintatica = True
 
-  imprimir_erros(erros_lexicos)
-  if rodou_sintatica:
+  if "syntax" in modo or "semantic" in modo:
+    (
+      node,
+      erros_lexicos,
+      erros_sintaticos,
+      erros_semanticos,
+      declaracoes_importadas,
+      _codigo_fonte,
+    ) = executar_parse(caminho)
+
+    if "syntax" in modo:
+      apresentar_tabela_sintese(node, declaracoes_importadas)
+    if "semantic" in modo:
+      apresentar_padroes(node, declaracoes_importadas)
+
+  if "lexic" in modo or "syntax" in modo:
+    imprimir_erros(erros_lexicos)
+  if "syntax" in modo:
     print_syntax_errors(erros_sintaticos)
+  if "syntax" in modo or "semantic" in modo:
     print_semantic_errors(erros_semanticos)
 
 
