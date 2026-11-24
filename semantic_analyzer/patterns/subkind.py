@@ -1,4 +1,9 @@
-"""Reconhecimento do padrão Subkind"""
+"""Reconhecimento do padrão Subkind.
+
+O Subkind é um sortal rígido que especializa outro sortal rígido. Aqui o matcher
+cobre as duas variantes do padrão, coerce `kind -> subkind` quando o kind
+especializa um sortal rígido e valida a identidade herdada dos subkinds.
+"""
 
 from .index import OntologyIndex
 from .model import (
@@ -15,6 +20,14 @@ IDENTITY_PROVIDERS = {"kind", "collective"}
 
 
 def analyze_subkind_patterns(index: OntologyIndex) -> SubkindReport:
+  """
+  Analisa os subkinds do índice e monta o relatório do padrão Subkind
+
+  Aplica a coerção kind -> subkind e reconhece as duas variantes do padrão,
+  validando a identidade herdada e evitando duplicar específicos cobertos
+  por um genset.
+  """
+
   coercions: list[PatternDiagnostic] = []
   deductions: list[PatternDiagnostic] = []
   errors: list[PatternDiagnostic] = []
@@ -40,6 +53,7 @@ def analyze_subkind_patterns(index: OntologyIndex) -> SubkindReport:
 
 
 def _ref(info) -> ElementRef:
+  """Converte uma classe ou genset em uma referência de relatório"""
   return ElementRef(
     name=info.name,
     line=info.line,
@@ -54,6 +68,7 @@ def _diagnostic(
   info,
   suggestion: str | None = None,
 ) -> PatternDiagnostic:
+  """Cria um diagnóstico do Subkind usando linha, coluna e origem do nó"""
   return PatternDiagnostic(
     category=category,
     pattern=PATTERN,
@@ -66,6 +81,7 @@ def _diagnostic(
 
 
 def _has_inheritance_cycle(name: str, index: OntologyIndex, path: set[str]) -> bool:
+  """Verifica se `name` participa de um ciclo de especialização"""
   if name in path:
     return True
 
@@ -85,11 +101,20 @@ def _coerce_declared_kinds(
   coercions: list[PatternDiagnostic],
   errors: list[PatternDiagnostic],
 ) -> None:
+  """
+  Coerção `kind -> subkind` para kinds que especializam um sortal rígido
+
+  Um kind que especializa outro kind, subkind ou collective deixa de ser
+  sortal e passa a ser subkind. Ciclos e pais não-sortais são reportados como
+  erro.
+  """
+
   resolved: set[str] = set()
   visiting: set[str] = set()
   reported_cycles: set[str] = set()
 
   def resolve(info) -> None:
+    """Resolve recursivamente o estereótipo coercido de `info` e dos seus pais"""
     if info.name in resolved or info.name in visiting:
       return
 
@@ -175,6 +200,13 @@ def _coerce_declared_kinds(
 def has_identity_provider(
   info, index: OntologyIndex, seen: set[str] | None = None
 ) -> bool:
+  """
+  Verifica se `info` alcança direta ou indiretamente um kind/collective
+
+  Percorre a cadeia de `specializes`. Esses estereótipos são os provedores de
+  identidade usados para validar subkinds e roles.
+  """
+
   if info.coerced_stereotype in IDENTITY_PROVIDERS:
     return True
 
@@ -206,6 +238,14 @@ def _variant_two(
   errors: list[PatternDiagnostic],
   covered: set[str],
 ) -> None:
+  """
+  Reconhece a variante 2: um genset disjoint de subkinds
+
+  O general do genset precisa ser um sortal rígido e os específicos precisam
+  ser subkinds que o especializam. Específicos sem `specializes` tem a aresta
+  deduzida, e os nomes cobertos são registrados para não repetir na variante 1.
+  """
+
   for genset in index.gensets:
     general = index.classes.get(genset.general)
 
@@ -368,6 +408,13 @@ def _variant_one(
   errors: list[PatternDiagnostic],
   covered: set[str],
 ) -> None:
+  """
+  Reconhece a variante 1: subkinds que especializam um sortal rígido
+
+  Cada subkind não coberto por um genset precisa especializar diretamente um
+  kind, subkind ou collective e alcançar um provedor de identidade.
+  """
+
   for info in index.classes.values():
     if info.coerced_stereotype != "subkind" or info.name in covered:
       continue
