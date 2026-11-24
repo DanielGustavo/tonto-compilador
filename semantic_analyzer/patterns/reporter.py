@@ -7,6 +7,7 @@ from .model import (
   PhaseMatch,
   RelatorMatch,
   RoleMatch,
+  RoleMixinMatch,
   SubkindMatch,
 )
 
@@ -70,6 +71,19 @@ def _mode_origins(match: ModeMatch) -> str:
   return ", ".join(origins) if origins else "-"
 
 
+def _role_mixin_origins(match: RoleMixinMatch) -> str:
+  origins: list[str] = []
+
+  for ref in (match.role_mixin, *match.roles, *match.relators):
+    if ref.origin and ref.origin not in origins:
+      origins.append(ref.origin)
+
+  if match.genset is not None and match.genset.origin not in origins:
+    origins.append(match.genset.origin)
+
+  return ", ".join(origins) if origins else "-"
+
+
 def _format_genset(match: SubkindMatch | PhaseMatch) -> str:
   if match.genset is None:
     return "-"
@@ -97,6 +111,7 @@ def print_pattern_report(report: PatternReport) -> None:
   role = report.role
   relator = report.relator
   mode = report.mode
+  role_mixin = report.role_mixin
 
   print("\n============ PADRÕES DE PROJETO ============")
 
@@ -205,6 +220,36 @@ def print_pattern_report(report: PatternReport) -> None:
   else:
     print("  Nenhum padrão Mode encontrado.")
 
+  if role_mixin.matches:
+    ordered_role_mixins = sorted(role_mixin.matches, key=lambda match: match.lines)
+    print_table(
+      "Padrões RoleMixin",
+      (
+        "Variante",
+        "RoleMixin",
+        "Papéis",
+        "Relator(es)",
+        "Genset",
+        "Pacote",
+        "Linhas",
+      ),
+      [
+        (
+          str(match.variant),
+          match.role_mixin.name,
+          ", ".join(ref.name for ref in match.roles) or "-",
+          ", ".join(ref.name for ref in match.relators) or "-",
+          match.genset.name if match.genset is not None else "-",
+          _role_mixin_origins(match),
+          ", ".join(str(line) for line in match.lines),
+        )
+        for match in ordered_role_mixins
+      ],
+      indent="  ",
+    )
+  else:
+    print("  Nenhum padrão RoleMixin encontrado.")
+
   print("\n(2) ERROS A SEREM CORRIGIDOS POR COERÇÃO")
 
   if subkind.coercions:
@@ -227,12 +272,17 @@ def print_pattern_report(report: PatternReport) -> None:
     for coercion in mode.coercions:
       _print_diagnostic(coercion)
 
+  if role_mixin.coercions:
+    for coercion in role_mixin.coercions:
+      _print_diagnostic(coercion)
+
   if (
     not subkind.coercions
     and not phase.coercions
     and not role.coercions
     and not relator.coercions
     and not mode.coercions
+    and not role_mixin.coercions
   ):
     print("  Nenhuma coerção encontrada.")
 
@@ -258,12 +308,17 @@ def print_pattern_report(report: PatternReport) -> None:
     for error in mode.errors:
       _print_diagnostic(error)
 
+  if role_mixin.errors:
+    for error in role_mixin.errors:
+      _print_diagnostic(error)
+
   if (
     not subkind.errors
     and not phase.errors
     and not role.errors
     and not relator.errors
     and not mode.errors
+    and not role_mixin.errors
   ):
     print("  Nenhum erro de padrão encontrado.")
 
@@ -289,11 +344,16 @@ def print_pattern_report(report: PatternReport) -> None:
     for deduction in mode.deductions:
       _print_diagnostic(deduction)
 
+  if role_mixin.deductions:
+    for deduction in role_mixin.deductions:
+      _print_diagnostic(deduction)
+
   if (
     not subkind.deductions
     and not phase.deductions
     and not role.deductions
     and not relator.deductions
     and not mode.deductions
+    and not role_mixin.deductions
   ):
     print("  Nenhum padrão incompleto deduzido.")

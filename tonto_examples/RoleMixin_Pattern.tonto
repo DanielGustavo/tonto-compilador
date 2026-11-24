@@ -1,0 +1,153 @@
+package RoleMixinPattern
+
+//=============================================
+// VÁLIDO (variante 2): roleMixin com roles, genset e relator
+kind Pessoa
+kind Empresa
+
+roleMixin Cliente
+
+role Cliente_Individual specializes Cliente, Pessoa
+role Cliente_Empresarial specializes Cliente, Empresa
+
+disjoint complete genset Tipos_De_Cliente {
+    general Cliente
+    specifics Cliente_Individual, Cliente_Empresarial
+}
+
+relator Atendimento {
+    @mediation [1..*] -- [1..*] Cliente
+}
+
+//=============================================
+// VÁLIDO (variante 2): genset é opcional
+kind Animal
+
+roleMixin Tutelado
+
+role Cao specializes Tutelado, Animal
+role Gato specializes Tutelado, Animal
+
+relator Tutela {
+    @mediation [1..*] -- [1..*] Tutelado
+}
+
+//=============================================
+// VÁLIDO (variante 1): roleMixin especializa outro roleMixin e herda a
+// dependência relacional do ancestral
+roleMixin Consumidor
+
+role Cliente_Comum specializes Consumidor, Pessoa
+
+relator Consumo {
+    @mediation [1..*] -- [1..*] Consumidor
+}
+
+roleMixin Cliente_Premium specializes Consumidor
+
+role Comprador_Premium specializes Cliente_Premium, Pessoa
+
+//=============================================
+// COERÇÃO: categoria que só agrega roles vira roleMixin
+kind Fornecedor
+kind Transportadora
+
+category Agente_Externo
+
+role Fornecedor_Externo specializes Agente_Externo, Fornecedor
+role Transportadora_Externa specializes Agente_Externo, Transportadora
+
+disjoint complete genset Tipos_De_Agente_Externo {
+    general Agente_Externo
+    specifics Fornecedor_Externo, Transportadora_Externa
+}
+
+relator Contrato_Externo {
+    @mediation [1..*] -- [1..*] Agente_Externo
+}
+
+//=============================================
+// DEDUÇÃO: roleMixin sem roles
+roleMixin Sem_Papeis
+
+//=============================================
+// DEDUÇÃO: roleMixin com roles, mas sem relator/mediação
+kind Cidadao
+
+roleMixin Eleitor
+
+role Eleitor_Jovem specializes Eleitor, Cidadao
+
+//=============================================
+// DEDUÇÃO: o genset deduz a aresta que falta para o roleMixin
+kind Produtor
+
+roleMixin Parceiro
+
+role Atacadista specializes Produtor
+role Varejista specializes Parceiro, Produtor
+
+disjoint complete genset Tipos_De_Parceiro {
+    general Parceiro
+    specifics Atacadista, Varejista
+}
+
+relator Parceria {
+    @mediation [1..*] -- [1..*] Parceiro
+}
+
+//=============================================
+// ERRO: roleMixin é anti-rígido e não pode ter filho rígido
+// (o Subkind também reporta este caso)
+roleMixin Conta_Ativa
+
+kind Conta
+subkind Conta_Especial specializes Conta_Ativa
+
+//=============================================
+// ERRO: role do roleMixin não alcança um kind/collective
+kind Fiscal
+
+roleMixin Contribuinte
+
+role Isento specializes Contribuinte
+
+relator Isencao {
+    @mediation [1..*] -- [1..*] Contribuinte
+}
+
+//=============================================
+// ERRO: genset de roles sem 'disjoint'
+kind Loja
+
+roleMixin Frequentador
+
+role Frequente specializes Frequentador, Loja
+role Esporadico specializes Frequentador, Loja
+
+complete genset Tipos_De_Frequentador {
+    general Frequentador
+    specifics Frequente, Esporadico
+}
+
+relator Frequencia {
+    @mediation [1..*] -- [1..*] Frequentador
+}
+
+//=============================================
+// ERRO: genset de roles mistura um kind
+kind Veiculo
+
+roleMixin Condutor
+
+role Motorista specializes Condutor, Pessoa
+kind Passageiro
+
+disjoint complete genset Tipos_De_Condutor {
+    general Condutor
+    specifics Motorista, Passageiro
+}
+
+relator Direcao {
+    @mediation [1..*] -- [1..*] Condutor
+}

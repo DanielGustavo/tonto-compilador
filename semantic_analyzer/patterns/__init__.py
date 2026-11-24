@@ -22,6 +22,8 @@ from .model import (
   RelatorMatch,
   RelatorReport,
   RoleMatch,
+  RoleMixinMatch,
+  RoleMixinReport,
   RoleReport,
   SubkindMatch,
   SubkindReport,
@@ -30,6 +32,7 @@ from .phase import analyze_phase_patterns
 from .relator import analyze_relator_patterns
 from .reporter import print_pattern_report
 from .role import analyze_role_patterns
+from .role_mixin import analyze_role_mixin_patterns
 from .subkind import analyze_subkind_patterns
 
 __all__ = [
@@ -47,6 +50,8 @@ __all__ = [
   "RelatorMatch",
   "RelatorReport",
   "RoleMatch",
+  "RoleMixinMatch",
+  "RoleMixinReport",
   "RoleReport",
   "SubkindMatch",
   "SubkindReport",
@@ -54,6 +59,7 @@ __all__ = [
   "analyze_patterns",
   "analyze_phase_patterns",
   "analyze_relator_patterns",
+  "analyze_role_mixin_patterns",
   "analyze_role_patterns",
   "analyze_subkind_patterns",
   "build_index",
@@ -83,10 +89,14 @@ def analyze_patterns(
   # aplicada quando o Role procurar as mediações.
   relator = analyze_relator_patterns(index)
 
+  # O roleMixin roda depois do relator e antes do role
+  role_mixin = analyze_role_mixin_patterns(index)
+
   return PatternReport(
     subkind=subkind,
     phase=phase,
     relator=relator,
     role=analyze_role_patterns(index),
     mode=mode,
+    role_mixin=role_mixin,
   )

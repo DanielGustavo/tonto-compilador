@@ -29,7 +29,7 @@ relator Promocao_A_Gerente {
 // ROLE COMPLETO COM DEPENDÊNCIA HERDADA: general roleMixin
 roleMixin Consumidor
 
-role Cliente_Premium specializes Consumidor
+role Cliente_Premium specializes Consumidor, Pessoa
 
 relator Consumo {
     @mediation [1..*] -- [1..*] Consumidor

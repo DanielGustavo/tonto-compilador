@@ -112,6 +112,17 @@ class ModeMatch:
   deduced: bool = False
 
 
+@dataclass(frozen=True)
+class RoleMixinMatch:
+  variant: int
+  role_mixin: ElementRef
+  roles: tuple[ElementRef, ...]
+  relators: tuple[ElementRef, ...]
+  genset: ElementRef | None
+  lines: tuple[int, ...]
+  deduced: bool = False
+
+
 @dataclass
 class SubkindReport:
   matches: list[SubkindMatch]
@@ -153,9 +164,18 @@ class ModeReport:
 
 
 @dataclass
+class RoleMixinReport:
+  matches: list[RoleMixinMatch]
+  coercions: list[PatternDiagnostic]
+  deductions: list[PatternDiagnostic]
+  errors: list[PatternDiagnostic]
+
+
+@dataclass
 class PatternReport:
   subkind: SubkindReport
   phase: PhaseReport
   role: RoleReport
   relator: RelatorReport
   mode: ModeReport
+  role_mixin: RoleMixinReport
