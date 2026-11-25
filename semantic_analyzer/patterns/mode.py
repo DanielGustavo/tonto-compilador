@@ -70,7 +70,7 @@ def analyze_mode_patterns(index: OntologyIndex) -> ModeReport:
     if info.coerced_stereotype not in MODE_STEREOTYPES:
       continue
 
-    entries = inherence.get(info.name, [])
+    entries = inherence.get(info.node.name, [])
 
     # sem nenhuma relação de inerência, o padrão está incompleto
     if not entries:
@@ -82,12 +82,12 @@ def analyze_mode_patterns(index: OntologyIndex) -> ModeReport:
     if not hosts:
       continue
 
-    dependencies = _unique_refs(external.get(info.name, []))
+    dependencies = _unique_refs(external.get(info.node.name, []))
     lines = {
-      info.line,
-      *(host.line for host, _ in hosts),
-      *(relation.line for _, relation in hosts),
-      *(dependency.line for dependency in dependencies),
+      info.node.line,
+      *(host.node.line for host, _ in hosts),
+      *(relation.node.line for _, relation in hosts),
+      *(dependency.node.line for dependency in dependencies),
     }
 
     matches.append(
@@ -110,15 +110,15 @@ def analyze_mode_patterns(index: OntologyIndex) -> ModeReport:
 def _ref(info) -> ElementRef:
   """Converte uma classe ou relação em uma referência de relatório"""
 
-  name = info.name
+  name = info.node.name
 
   if name is None:
     name = "anônima"
 
   return ElementRef(
     name=name,
-    line=info.line,
-    column=info.column,
+    line=info.node.line,
+    column=info.node.column,
     origin=info.origin,
   )
 
@@ -135,8 +135,8 @@ def _diagnostic(
     category=category,
     pattern=PATTERN,
     message=message,
-    line=info.line,
-    column=info.column,
+    line=info.node.line,
+    column=info.node.column,
     origin=info.origin,
     suggestion=suggestion,
   )
@@ -145,7 +145,7 @@ def _diagnostic(
 def _endpoint_source(relation: RelationInfo) -> str | None:
   """Devolve o lado de origem: `source` explícito ou `owner` da relação interna"""
 
-  return relation.source if relation.source is not None else relation.owner
+  return relation.node.source if relation.node.source is not None else relation.owner
 
 
 def _endpoints(
@@ -156,7 +156,7 @@ def _endpoints(
 
   source_name = _endpoint_source(relation)
   source = index.classes.get(source_name) if source_name is not None else None
-  target = index.classes.get(relation.target)
+  target = index.classes.get(relation.node.target)
 
   return source, target
 
@@ -164,7 +164,7 @@ def _endpoints(
 def _can_coerce_to_mode(info: ClassInfo) -> bool:
   """Indica se a classe ainda pode ser coercida de kind para mode"""
 
-  return info.declared_stereotype == "kind" and info.coerced_stereotype == "kind"
+  return info.node.stereotype == "kind" and info.coerced_stereotype == "kind"
 
 
 def _coerce_kinds_to_mode(
@@ -179,7 +179,7 @@ def _coerce_kinds_to_mode(
   """
 
   for relation in index.relations:
-    if relation.stereotype not in INHERENCE_STEREOTYPES:
+    if relation.node.stereotype not in INHERENCE_STEREOTYPES:
       continue
 
     source, target = _endpoints(relation, index)
@@ -207,12 +207,12 @@ def _coerce_kinds_to_mode(
       _diagnostic(
         "coercion",
         (
-          f"classe '{chosen.name}' declarada kind participa de inerência com "
-          f"'{other.name}', estereótipo coercido de 'kind' para 'mode'."
+          f"classe '{chosen.node.name}' declarada kind participa de inerência com "
+          f"'{other.node.name}', estereótipo coercido de 'kind' para 'mode'."
         ),
         chosen,
         (
-          f"declare '{chosen.name}' explicitamente como 'mode {chosen.name}' "
+          f"declare '{chosen.node.name}' explicitamente como 'mode {chosen.node.name}' "
           "(coerção kind -> mode)."
         ),
       )
@@ -225,19 +225,19 @@ def _collect_inherence(index: OntologyIndex) -> dict[str, list[Host]]:
   inherence: dict[str, list[Host]] = {}
 
   for relation in index.relations:
-    if relation.stereotype not in INHERENCE_STEREOTYPES:
+    if relation.node.stereotype not in INHERENCE_STEREOTYPES:
       continue
 
     source, target = _endpoints(relation, index)
 
     if source is not None and source.coerced_stereotype in MODE_STEREOTYPES:
       if target is not None:
-        inherence.setdefault(source.name, []).append((target, relation))
+        inherence.setdefault(source.node.name, []).append((target, relation))
       continue
 
     if target is not None and target.coerced_stereotype in MODE_STEREOTYPES:
       if source is not None:
-        inherence.setdefault(target.name, []).append((source, relation))
+        inherence.setdefault(target.node.name, []).append((source, relation))
 
   return inherence
 
@@ -250,19 +250,19 @@ def _collect_external_dependencies(
   dependencies: dict[str, list[ClassInfo]] = {}
 
   for relation in index.relations:
-    if relation.stereotype not in EXTERNAL_DEPENDENCE_STEREOTYPES:
+    if relation.node.stereotype not in EXTERNAL_DEPENDENCE_STEREOTYPES:
       continue
 
     source, target = _endpoints(relation, index)
 
     if source is not None and source.coerced_stereotype in MODE_STEREOTYPES:
       if target is not None:
-        dependencies.setdefault(source.name, []).append(target)
+        dependencies.setdefault(source.node.name, []).append(target)
       continue
 
     if target is not None and target.coerced_stereotype in MODE_STEREOTYPES:
       if source is not None:
-        dependencies.setdefault(target.name, []).append(source)
+        dependencies.setdefault(target.node.name, []).append(source)
 
   return dependencies
 
@@ -278,11 +278,11 @@ def _valid_hosts(
   seen: set[str] = set()
 
   for host, relation in entries:
-    if host.name == info.name:
+    if host.node.name == info.node.name:
       errors.append(
         _diagnostic(
           "error",
-          f"mode '{info.name}' inere ele mesmo.",
+          f"mode '{info.node.name}' inere ele mesmo.",
           relation,
           ("substitua a inerência por um endurante diferente do próprio mode."),
         )
@@ -294,22 +294,22 @@ def _valid_hosts(
         _diagnostic(
           "error",
           (
-            f"mode '{info.name}' inere em '{host.name}', que é "
+            f"mode '{info.node.name}' inere em '{host.node.name}', que é "
             f"'{host.coerced_stereotype}' e não um endurante."
           ),
           relation,
           (
-            f"faça '{info.name}' inerir um endurante, como kind, "
+            f"faça '{info.node.name}' inerir um endurante, como kind, "
             "subkind, phase, role, collective ou relator."
           ),
         )
       )
       continue
 
-    if host.name in seen:
+    if host.node.name in seen:
       continue
 
-    seen.add(host.name)
+    seen.add(host.node.name)
     valid.append((host, relation))
 
   return valid
@@ -322,7 +322,7 @@ def _unique_refs(infos: list[ClassInfo]) -> list[ClassInfo]:
   seen: set[tuple[str, int]] = set()
 
   for info in infos:
-    key = (info.name, info.line)
+    key = (info.node.name, info.node.line)
 
     if key in seen:
       continue
@@ -339,12 +339,12 @@ def _incomplete(info: ClassInfo) -> PatternDiagnostic:
   return _diagnostic(
     "deduction",
     (
-      f"mode '{info.name}' não possui relação de inerência "
+      f"mode '{info.node.name}' não possui relação de inerência "
       "('@characterization' ou '@inherence') com um portador."
     ),
     info,
     (
-      f"adicione uma relação de inerência do mode '{info.name}' para um "
+      f"adicione uma relação de inerência do mode '{info.node.name}' para um "
       "endurante (dedução do padrão Mode incompleto)."
     ),
   )

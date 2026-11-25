@@ -60,7 +60,7 @@ def analyze_relator_patterns(index: OntologyIndex) -> RelatorReport:
     if info.coerced_stereotype != RELATOR:
       continue
 
-    mediated = _valid_mediations(info, mediations.get(info.name, []), errors)
+    mediated = _valid_mediations(info, mediations.get(info.node.name, []), errors)
 
     # só tenta completar quando falta mediação: em um relator já completo a
     # material pode pertencer a outro relator
@@ -85,15 +85,15 @@ def analyze_relator_patterns(index: OntologyIndex) -> RelatorReport:
     material_refs = tuple(_ref(relation) for relation in materials)
 
     lines = {
-      info.line,
+      info.node.line,
       *(ref.line for ref in mediated_refs),
       *(
-        entry.line
+        entry.node.line
         for entries in mediated.values()
         for _, entry in entries
         if entry is not None
       ),
-      *(relation.line for relation in materials),
+      *(relation.node.line for relation in materials),
     }
 
     matches.append(
@@ -118,15 +118,15 @@ def analyze_relator_patterns(index: OntologyIndex) -> RelatorReport:
 def _ref(info) -> ElementRef:
   """Converte uma classe ou relação em uma referência de relatório"""
 
-  name = info.name
+  name = info.node.name
 
   if name is None:
     name = "anônima"
 
   return ElementRef(
     name=name,
-    line=info.line,
-    column=info.column,
+    line=info.node.line,
+    column=info.node.column,
     origin=info.origin,
   )
 
@@ -143,8 +143,8 @@ def _diagnostic(
     category=category,
     pattern=PATTERN,
     message=message,
-    line=info.line,
-    column=info.column,
+    line=info.node.line,
+    column=info.node.column,
     origin=info.origin,
     suggestion=suggestion,
   )
@@ -153,7 +153,7 @@ def _diagnostic(
 def _endpoint_source(relation: RelationInfo) -> str | None:
   """Devolve o lado de origem: `source` explícito ou `owner` da relação interna"""
 
-  return relation.source if relation.source is not None else relation.owner
+  return relation.node.source if relation.node.source is not None else relation.owner
 
 
 def _coerce_kinds_to_relator(
@@ -167,12 +167,12 @@ def _coerce_kinds_to_relator(
   count: dict[str, set[str]] = {}
 
   for relation in index.relations:
-    if relation.stereotype != "mediation":
+    if relation.node.stereotype != "mediation":
       continue
 
     source = _endpoint_source(relation)
     source_info = index.classes.get(source) if source is not None else None
-    target_info = index.classes.get(relation.target)
+    target_info = index.classes.get(relation.node.target)
 
     if source_info is None or target_info is None:
       continue
@@ -180,16 +180,16 @@ def _coerce_kinds_to_relator(
     if target_info.coerced_stereotype not in SUBSTANTIALS:
       continue
 
-    if source_info.name == target_info.name:
+    if source_info.node.name == target_info.node.name:
       continue
 
-    count.setdefault(source_info.name, set()).add(target_info.name)
+    count.setdefault(source_info.node.name, set()).add(target_info.node.name)
 
   for info in index.classes.values():
     if info.coerced_stereotype != "kind":
       continue
 
-    endpoints = count.get(info.name, set())
+    endpoints = count.get(info.node.name, set())
 
     if len(endpoints) < MIN_MEDIATED:
       continue
@@ -199,14 +199,14 @@ def _coerce_kinds_to_relator(
       _diagnostic(
         "coercion",
         (
-          f"classe '{info.name}' declarada kind medeia {len(endpoints)} "
+          f"classe '{info.node.name}' declarada kind medeia {len(endpoints)} "
           "universais substanciais, estereótipo coercido de 'kind' para "
           "'relator'."
         ),
         info,
         (
-          f"declare '{info.name}' explicitamente como 'relator "
-          f"{info.name}' (coerção kind -> relator)."
+          f"declare '{info.node.name}' explicitamente como 'relator "
+          f"{info.node.name}' (coerção kind -> relator)."
         ),
       )
     )
@@ -223,31 +223,31 @@ def _collect_mediations(
   for relation in index.relations:
     source = _endpoint_source(relation)
     source_info = index.classes.get(source) if source is not None else None
-    target_info = index.classes.get(relation.target)
+    target_info = index.classes.get(relation.node.target)
 
-    if relation.stereotype == "mediation":
+    if relation.node.stereotype == "mediation":
       if (
         source_info is not None
         and source_info.coerced_stereotype == RELATOR
         and target_info is not None
       ):
-        mediations.setdefault(source_info.name, []).append((target_info, relation))
+        mediations.setdefault(source_info.node.name, []).append((target_info, relation))
       elif (
         target_info is not None
         and target_info.coerced_stereotype == RELATOR
         and source_info is not None
       ):
-        mediations.setdefault(target_info.name, []).append((source_info, relation))
+        mediations.setdefault(target_info.node.name, []).append((source_info, relation))
 
-    elif relation.stereotype == "material":
+    elif relation.node.stereotype == "material":
       if source_info is not None and source_info.coerced_stereotype == RELATOR:
         if target_info is not None:
-          mediations.setdefault(source_info.name, []).append((target_info, relation))
+          mediations.setdefault(source_info.node.name, []).append((target_info, relation))
           _coerce_material(source_info, target_info, relation, coercions)
 
       elif target_info is not None and target_info.coerced_stereotype == RELATOR:
         if source_info is not None:
-          mediations.setdefault(target_info.name, []).append((source_info, relation))
+          mediations.setdefault(target_info.node.name, []).append((source_info, relation))
           _coerce_material(target_info, source_info, relation, coercions)
 
   return mediations
@@ -271,13 +271,13 @@ def _coerce_material(
     _diagnostic(
       "coercion",
       (
-        f"relação '@material' entre relator '{relator.name}' e universal "
-        f"substancial '{other.name}' tratada como mediação "
+        f"relação '@material' entre relator '{relator.node.name}' e universal "
+        f"substancial '{other.node.name}' tratada como mediação "
         "(coerção @material -> @mediation)."
       ),
       relation,
       (
-        f"declare a relação entre '{relator.name}' e '{other.name}' "
+        f"declare a relação entre '{relator.node.name}' e '{other.node.name}' "
         "explicitamente como '@mediation'."
       ),
     )
@@ -290,12 +290,12 @@ def _derived_materials(index: OntologyIndex) -> list[DerivedMaterial]:
   materials: list[DerivedMaterial] = []
 
   for relation in index.relations:
-    if relation.stereotype != "material":
+    if relation.node.stereotype != "material":
       continue
 
     source = _endpoint_source(relation)
     source_info = index.classes.get(source) if source is not None else None
-    target_info = index.classes.get(relation.target)
+    target_info = index.classes.get(relation.node.target)
 
     if source_info is None or target_info is None:
       continue
@@ -306,10 +306,10 @@ def _derived_materials(index: OntologyIndex) -> list[DerivedMaterial]:
     if target_info.coerced_stereotype == RELATOR:
       continue
 
-    if source_info.name == target_info.name:
+    if source_info.node.name == target_info.node.name:
       continue
 
-    materials.append((source_info.name, target_info.name, relation))
+    materials.append((source_info.node.name, target_info.node.name, relation))
 
   return materials
 
@@ -326,11 +326,11 @@ def _valid_mediations(
   valid: dict[str, list[tuple[ClassInfo, RelationInfo | None]]] = {}
 
   for mediated, relation in entries:
-    if mediated.name == info.name:
+    if mediated.node.name == info.node.name:
       errors.append(
         _diagnostic(
           "error",
-          f"relator '{info.name}' medeia a si mesmo.",
+          f"relator '{info.node.name}' medeia a si mesmo.",
           relation if relation is not None else info,
           (
             "substitua a auto mediação por um universal substancial distinto "
@@ -345,20 +345,20 @@ def _valid_mediations(
         _diagnostic(
           "error",
           (
-            f"relator '{info.name}' medeia '{mediated.name}', que é "
+            f"relator '{info.node.name}' medeia '{mediated.node.name}', que é "
             f"'{mediated.coerced_stereotype}' e não um universal substancial "
             "válido para mediação."
           ),
           relation if relation is not None else mediated,
           (
-            f"faça '{info.name}' mediar kind, subkind, phase, role, roleMixin, "
+            f"faça '{info.node.name}' mediar kind, subkind, phase, role, roleMixin, "
             "collective, category ou mixin."
           ),
         )
       )
       continue
 
-    valid.setdefault(mediated.name, []).append((mediated, relation))
+    valid.setdefault(mediated.node.name, []).append((mediated, relation))
 
   return valid
 
@@ -411,14 +411,14 @@ def _deduce_missing_mediations(
         _diagnostic(
           "deduction",
           (
-            f"relator '{info.name}' não declara mediação para "
-            f"'{missing_info.name}', mas a relação '@material' entre "
+            f"relator '{info.node.name}' não declara mediação para "
+            f"'{missing_info.node.name}', mas a relação '@material' entre "
             f"'{source}' e '{target}' deriva desse relator."
           ),
           relation,
           (
-            f"adicione '{{ @mediation {missing_info.name} }}' ao relator "
-            f"'{info.name}' (dedução pela sobrecarga da material derivada)."
+            f"adicione '{{ @mediation {missing_info.node.name} }}' ao relator "
+            f"'{info.node.name}' (dedução pela sobrecarga da material derivada)."
           ),
         )
       )
@@ -433,13 +433,13 @@ def _incomplete(info: ClassInfo, count: int) -> PatternDiagnostic:
   return _diagnostic(
     "deduction",
     (
-      f"relator '{info.name}' medeia {count} universal(is) substancial(is) "
+      f"relator '{info.node.name}' medeia {count} universal(is) substancial(is) "
       "distinto(s); "
       f"o padrão Relator exige pelo menos {MIN_MEDIATED}."
     ),
     info,
     (
       f"acrescente pelo menos {MIN_MEDIATED - count} mediação(ões) '@mediation' "
-      f"ao relator '{info.name}' para completar o padrão."
+      f"ao relator '{info.node.name}' para completar o padrão."
     ),
   )

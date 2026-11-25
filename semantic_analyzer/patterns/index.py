@@ -27,35 +27,13 @@ def build_index(
   index = OntologyIndex(package_name=package_name)
 
   def add_relation(node: ast_nodes.Relation, origin: str, owner: str | None) -> None:
-    index.relations.append(
-      RelationInfo(
-        name=node.name,
-        stereotype=node.stereotype,
-        source=node.source,
-        target=node.target,
-        source_cardinality=node.source_cardinality,
-        target_cardinality=node.target_cardinality,
-        owner=owner,
-        symbol=node.symbol,
-        line=node.line,
-        column=node.column,
-        origin=origin,
-      )
-    )
+    index.relations.append(RelationInfo.from_node(node, owner, origin))
 
   def add_class(node: ast_nodes.ClassDeclaration, origin: str) -> None:
     if not node.name or node.name in index.classes:
       return
 
-    index.classes[node.name] = ClassInfo(
-      name=node.name,
-      declared_stereotype=node.stereotype,
-      coerced_stereotype=node.stereotype,
-      specializes=list(node.specializes),
-      line=node.line,
-      column=node.column,
-      origin=origin,
-    )
+    index.classes[node.name] = ClassInfo.from_node(node, origin)
 
     for member in node.members:
       if isinstance(member, ast_nodes.Relation):
@@ -65,18 +43,7 @@ def build_index(
     if not node.name:
       return
 
-    index.gensets.append(
-      GensetInfo(
-        name=node.name,
-        general=node.general,
-        specifics=tuple(node.specifics),
-        disjointness=node.disjointness,
-        completeness=node.completeness,
-        line=node.line,
-        column=node.column,
-        origin=origin,
-      )
-    )
+    index.gensets.append(GensetInfo.from_node(node, origin))
 
   def add_declaration(node: ast_nodes.Node | None, origin: str) -> None:
     if isinstance(node, ast_nodes.ClassDeclaration):

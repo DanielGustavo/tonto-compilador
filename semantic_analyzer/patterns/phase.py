@@ -57,9 +57,9 @@ def analyze_phase_patterns(index: OntologyIndex) -> PhaseReport:
 def _ref(info) -> ElementRef:
   """Converte uma classe ou genset em uma referência de relatório"""
   return ElementRef(
-    name=info.name,
-    line=info.line,
-    column=info.column,
+    name=info.node.name,
+    line=info.node.line,
+    column=info.node.column,
     origin=info.origin,
   )
 
@@ -75,8 +75,8 @@ def _diagnostic(
     category=category,
     pattern=PATTERN,
     message=message,
-    line=info.line,
-    column=info.column,
+    line=info.node.line,
+    column=info.node.column,
     origin=info.origin,
     suggestion=suggestion,
   )
@@ -98,7 +98,7 @@ def _coerce_subkinds_under_phase(
 
     for info in index.classes.values():
       # Só interessa quem foi declarado subkind e ainda não virou phase
-      if info.declared_stereotype != "subkind" or info.coerced_stereotype == "phase":
+      if info.node.stereotype != "subkind" or info.coerced_stereotype == "phase":
         continue
 
       parent = _phase_parent(info, index)
@@ -112,13 +112,13 @@ def _coerce_subkinds_under_phase(
         _diagnostic(
           "coercion",
           (
-            f"subkind '{info.name}' especializa a phase '{parent.name}', "
+            f"subkind '{info.node.name}' especializa a phase '{parent.node.name}', "
             "estereótipo coercido de 'subkind' para 'phase'."
           ),
           info,
           (
-            f"declare '{info.name}' explicitamente como 'phase {info.name} "
-            f"specializes {parent.name}' (coerção subkind -> phase)."
+            f"declare '{info.node.name}' explicitamente como 'phase {info.node.name} "
+            f"specializes {parent.node.name}' (coerção subkind -> phase)."
           ),
         )
       )
@@ -152,14 +152,14 @@ def _partitions(
   """
 
   for genset in index.gensets:
-    general = index.classes.get(genset.general)
+    general = index.classes.get(genset.node.general)
 
     # gensets de outros padrões ou com general desconhecido
     if general is None or general.coerced_stereotype not in PHASE_GENERALS:
       continue
 
     specific_infos = [
-      index.classes[name] for name in genset.specifics if name in index.classes
+      index.classes[name] for name in genset.node.specifics if name in index.classes
     ]
     phase_infos = [
       info for info in specific_infos if info.coerced_stereotype == "phase"
@@ -172,14 +172,14 @@ def _partitions(
     # Partição não pode misturar phases com outros estereótipos
     if len(phase_infos) != len(specific_infos):
       invalid = ", ".join(
-        info.name for info in specific_infos if info.coerced_stereotype != "phase"
+        info.node.name for info in specific_infos if info.coerced_stereotype != "phase"
       )
 
       errors.append(
         _diagnostic(
           "error",
           (
-            f"genset de fases '{genset.name}' mistura phases com outros "
+            f"genset de fases '{genset.node.name}' mistura phases com outros "
             f"estereótipos ({invalid})."
           ),
           genset,
@@ -194,7 +194,7 @@ def _partitions(
         _diagnostic(
           "error",
           (
-            f"genset de fases '{genset.name}' possui {len(phase_infos)} fase(s); "
+            f"genset de fases '{genset.node.name}' possui {len(phase_infos)} fase(s); "
             f"uma partição exige ao menos {MIN_PHASES}."
           ),
           genset,
@@ -204,13 +204,13 @@ def _partitions(
       continue
 
     # Partição exige disjunção
-    if genset.disjointness != "disjoint":
+    if genset.node.disjointness != "disjoint":
       errors.append(
         _diagnostic(
           "error",
-          f"genset de fases '{genset.name}' deve ser disjoint.",
+          f"genset de fases '{genset.node.name}' deve ser disjoint.",
           genset,
-          f"declare '{genset.name}' como 'disjoint'.",
+          f"declare '{genset.node.name}' como 'disjoint'.",
         )
       )
       continue
@@ -225,9 +225,9 @@ def _partitions(
 
     lines = sorted(
       {
-        genset.line,
-        general.line,
-        *(info.line for info in phase_infos),
+        genset.node.line,
+        general.node.line,
+        *(info.node.line for info in phase_infos),
       }
     )
 
@@ -237,13 +237,13 @@ def _partitions(
         specifics=tuple(_ref(info) for info in phase_infos),
         genset=_ref(genset),
         lines=tuple(lines),
-        disjointness=genset.disjointness,
-        completeness=genset.completeness,
+        disjointness=genset.node.disjointness,
+        completeness=genset.node.completeness,
         deduced=edges_deduced,
       )
     )
 
-    covered.update(info.name for info in phase_infos)
+    covered.update(info.node.name for info in phase_infos)
 
 
 def _partition_edges(
@@ -264,7 +264,7 @@ def _partition_edges(
   valid = True
 
   for info in phase_infos:
-    if general.name in info.specializes:
+    if general.node.name in info.specializes:
       continue
 
     # Sem nenhum general, a aresta é deduzida a partir do genset
@@ -278,13 +278,13 @@ def _partition_edges(
       _diagnostic(
         "error",
         (
-          f"'{info.name}' não especializa o general "
-          f"'{general.name}' do genset '{genset.name}'."
+          f"'{info.node.name}' não especializa o general "
+          f"'{general.node.name}' do genset '{genset.node.name}'."
         ),
         info,
         (
-          f"faça '{info.name}' especializar '{general.name}' ou remova "
-          f"do genset '{genset.name}'."
+          f"faça '{info.node.name}' especializar '{general.node.name}' ou remova "
+          f"do genset '{genset.node.name}'."
         ),
       )
     )
@@ -295,7 +295,7 @@ def _partition_edges(
   # As deduções entram temporariamente no índice para que a checagem de
   # identidade considere o general. Se algo falhar, elas são desfeitas
   for info in pending:
-    info.specializes.append(general.name)
+    info.specializes.append(general.node.name)
 
   # O general precisa alcançar um provedor de identidade (sortal).
   if not has_identity_provider(general, index):
@@ -304,12 +304,12 @@ def _partition_edges(
       _diagnostic(
         "error",
         (
-          f"o general '{general.name}' do genset '{genset.name}' não "
+          f"o general '{general.node.name}' do genset '{genset.node.name}' não "
           "alcança um kind/collective provedor de identidade."
         ),
         general,
         (
-          f"faça '{general.name}' especializar direta ou indiretamente um "
+          f"faça '{general.node.name}' especializar direta ou indiretamente um "
           "kind ou collective."
         ),
       )
@@ -324,12 +324,12 @@ def _partition_edges(
       _diagnostic(
         "error",
         (
-          f"a phase '{info.name}' do genset '{genset.name}' não alcança um "
+          f"a phase '{info.node.name}' do genset '{genset.node.name}' não alcança um "
           "kind/collective provedor de identidade."
         ),
         info,
         (
-          f"faça '{info.name}' especializar direta ou indiretamente um "
+          f"faça '{info.node.name}' especializar direta ou indiretamente um "
           "kind ou collective."
         ),
       )
@@ -338,7 +338,7 @@ def _partition_edges(
   # Falhou a identidade: desfaz as arestas deduzidas e não emite dedução.
   if not valid:
     for info in pending:
-      info.specializes.remove(general.name)
+      info.specializes.remove(general.node.name)
     return False, False
 
   # Tudo certo: as arestas deduzidas passam a valer e são reportadas.
@@ -347,13 +347,13 @@ def _partition_edges(
       _diagnostic(
         "deduction",
         (
-          f"'{info.name}' não declara 'specializes {general.name}', mas o "
-          f"genset '{genset.name}' o agrupa sob '{general.name}'."
+          f"'{info.node.name}' não declara 'specializes {general.node.name}', mas o "
+          f"genset '{genset.node.name}' o agrupa sob '{general.node.name}'."
         ),
         info,
         (
-          f"declare explicitamente 'phase {info.name} specializes "
-          f"{general.name}' (dedução pela sobrecarga do genset)."
+          f"declare explicitamente 'phase {info.node.name} specializes "
+          f"{general.node.name}' (dedução pela sobrecarga do genset)."
         ),
       )
     )
@@ -383,9 +383,9 @@ def _uncovered_phases(
       errors.append(
         _diagnostic(
           "error",
-          f"phase '{info.name}' não declara nenhum general.",
+          f"phase '{info.node.name}' não declara nenhum general.",
           info,
-          f"adicione 'specializes <Sortal>' na declaração de '{info.name}'.",
+          f"adicione 'specializes <Sortal>' na declaração de '{info.node.name}'.",
         )
       )
       continue
@@ -398,16 +398,16 @@ def _uncovered_phases(
     ]
 
     if not valid_generals:
-      invalid = ", ".join(parent.name for parent in parents) or "-"
+      invalid = ", ".join(parent.node.name for parent in parents) or "-"
       errors.append(
         _diagnostic(
           "error",
           (
-            f"phase '{info.name}' especializa general inválido ({invalid}); "
+            f"phase '{info.node.name}' especializa general inválido ({invalid}); "
             "o padrão Phase exige kind, subkind, collective ou phase."
           ),
           info,
-          (f"faça '{info.name}' especializar kind, subkind, collective ou phase."),
+          (f"faça '{info.node.name}' especializar kind, subkind, collective ou phase."),
         )
       )
       continue
@@ -417,12 +417,12 @@ def _uncovered_phases(
         _diagnostic(
           "error",
           (
-            f"phase '{info.name}' não alcança um kind/collective provedor de "
+            f"phase '{info.node.name}' não alcança um kind/collective provedor de "
             "identidade."
           ),
           info,
           (
-            f"faça '{info.name}' especializar direta ou indiretamente um "
+            f"faça '{info.node.name}' especializar direta ou indiretamente um "
             "kind ou collective."
           ),
         )
@@ -437,7 +437,7 @@ def _uncovered_phases(
     children = [
       info
       for info in index.classes.values()
-      if info.coerced_stereotype == "phase" and general.name in info.specializes
+      if info.coerced_stereotype == "phase" and general.node.name in info.specializes
     ]
 
     # Um genset desse general já foi reportado na partição.
@@ -445,30 +445,30 @@ def _uncovered_phases(
     genset_specifics: set[str] = set()
 
     for candidate in index.gensets:
-      if candidate.general == general.name:
-        genset_specifics.update(candidate.specifics)
+      if candidate.node.general == general.node.name:
+        genset_specifics.update(candidate.node.specifics)
 
     uncovered = [
       info
       for info in children
-      if info.name not in covered and info.name not in genset_specifics
+      if info.node.name not in covered and info.node.name not in genset_specifics
     ]
 
     if not uncovered:
       continue
 
     # restam fases sem genset: a partição é deduzida como incompleta.
-    names = ", ".join(info.name for info in uncovered)
+    names = ", ".join(info.node.name for info in uncovered)
     deductions.append(
       _diagnostic(
         "deduction",
         (
-          f"a partição de fases de '{general.name}' está incompleta: "
+          f"a partição de fases de '{general.node.name}' está incompleta: "
           f"'{names}' não participa de um genset de fases válido."
         ),
         general,
         (
-          f"declare um genset 'disjoint' com general '{general.name}' "
+          f"declare um genset 'disjoint' com general '{general.node.name}' "
           f"e specifics {names} (dedução do padrão Phase incompleto)."
         ),
       )

@@ -1,29 +1,49 @@
-"""Modelo de dados da análise de padrões de projeto"""
+"""Modelo de dados da análise de padrões de projeto
+
+Cada `Info` guarda o nó da AST em `node` e acrescenta o estado que existe
+apenas na análise (`coerced_stereotype`, `origin`, `owner`)
+"""
 
 from dataclasses import dataclass
+
+from syntax_analyzer import ast_nodes
 
 
 @dataclass
 class ClassInfo:
-  name: str
-  declared_stereotype: str
-  coerced_stereotype: str
-  specializes: list[str]
-  line: int
-  column: int
+  node: ast_nodes.ClassDeclaration
   origin: str
+  coerced_stereotype: str
+  # Especializações declaradas mais as deduzidas.
+  # As deduções mudam esta lista, e não `node.specializes`, para não alterar a AST.
+  specializes: list[str]
+
+  @classmethod
+  def from_node(
+    cls,
+    node: ast_nodes.ClassDeclaration,
+    origin: str,
+  ) -> "ClassInfo":
+    return cls(
+      node=node,
+      origin=origin,
+      coerced_stereotype=node.stereotype,
+      specializes=list(node.specializes),
+    )
 
 
 @dataclass(frozen=True)
 class GensetInfo:
-  name: str
-  general: str
-  specifics: tuple[str, ...]
-  disjointness: str | None
-  completeness: str | None
-  line: int
-  column: int
+  node: ast_nodes.GeneralizationSet
   origin: str
+
+  @classmethod
+  def from_node(
+    cls,
+    node: ast_nodes.GeneralizationSet,
+    origin: str,
+  ) -> "GensetInfo":
+    return cls(node=node, origin=origin)
 
 
 @dataclass(frozen=True)
@@ -36,17 +56,18 @@ class ElementRef:
 
 @dataclass(frozen=True)
 class RelationInfo:
-  name: str | None
-  stereotype: str
-  source: str | None
-  target: str
-  source_cardinality: str | None
-  target_cardinality: str | None
+  node: ast_nodes.Relation
   owner: str | None
-  symbol: str
-  line: int
-  column: int
   origin: str
+
+  @classmethod
+  def from_node(
+    cls,
+    node: ast_nodes.Relation,
+    owner: str | None,
+    origin: str,
+  ) -> "RelationInfo":
+    return cls(node=node, owner=owner, origin=origin)
 
 
 @dataclass(frozen=True)

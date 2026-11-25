@@ -59,9 +59,9 @@ def analyze_role_patterns(index: OntologyIndex) -> RoleReport:
     for mediation in mediations:
       _, mediated, _ = mediation
 
-      if info.name == mediated:
+      if info.node.name == mediated:
         direct.append(mediation)
-      elif _is_subtype(info.name, mediated, index, set()):
+      elif _is_subtype(info.node.name, mediated, index, set()):
         inherited.append(mediation)
 
     # `relevant` reúne as mediações que sustentam a dependência do role
@@ -84,12 +84,12 @@ def analyze_role_patterns(index: OntologyIndex) -> RoleReport:
         _diagnostic(
           "deduction",
           (
-            f"role '{info.name}' não possui relator/mediação que sustente a "
+            f"role '{info.node.name}' não possui relator/mediação que sustente a "
             "dependência relacional."
           ),
           info,
           (
-            f"adicione um relator com '@mediation' para '{info.name}' "
+            f"adicione um relator com '@mediation' para '{info.node.name}' "
             "(dedução do padrão Role incompleto)."
           ),
         )
@@ -98,18 +98,18 @@ def analyze_role_patterns(index: OntologyIndex) -> RoleReport:
     structural_ok, genset = _check_genset(index, info, valid_generals)
 
     if not structural_ok:
-      generals = ", ".join(general.name for general in valid_generals)
+      generals = ", ".join(general.node.name for general in valid_generals)
       deductions.append(
         _diagnostic(
           "deduction",
           (
-            f"role '{info.name}' possui irmãos role sob o mesmo general "
+            f"role '{info.node.name}' possui irmãos role sob o mesmo general "
             f"({generals}) sem um genset que o inclua."
           ),
           info,
           (
             "declare um genset com esse general e inclua "
-            f"'{info.name}' em 'specifics' (dedução pela sobrecarga do genset)."
+            f"'{info.node.name}' em 'specifics' (dedução pela sobrecarga do genset)."
           ),
         )
       )
@@ -119,14 +119,14 @@ def analyze_role_patterns(index: OntologyIndex) -> RoleReport:
 
     relators = _relator_refs(relevant)
     lines = {
-      info.line,
-      *(general.line for general in valid_generals),
+      info.node.line,
+      *(general.node.line for general in valid_generals),
       *(relator.line for relator in relators),
-      *(relation.line for _, _, relation in relevant),
+      *(relation.node.line for _, _, relation in relevant),
     }
 
     if genset is not None:
-      lines.add(genset.line)
+      lines.add(genset.node.line)
 
     matches.append(
       RoleMatch(
@@ -150,9 +150,9 @@ def analyze_role_patterns(index: OntologyIndex) -> RoleReport:
 def _ref(info) -> ElementRef:
   """Converte uma classe, genset ou relação em uma referência de relatório"""
   return ElementRef(
-    name=info.name,
-    line=info.line,
-    column=info.column,
+    name=info.node.name,
+    line=info.node.line,
+    column=info.node.column,
     origin=info.origin,
   )
 
@@ -168,8 +168,8 @@ def _diagnostic(
     category=category,
     pattern=PATTERN,
     message=message,
-    line=info.line,
-    column=info.column,
+    line=info.node.line,
+    column=info.node.column,
     origin=info.origin,
     suggestion=suggestion,
   )
@@ -177,7 +177,7 @@ def _diagnostic(
 
 def _endpoint_source(relation: RelationInfo) -> str | None:
   """Devolve o lado de origem: `source` explícito ou `owner` da relação interna"""
-  return relation.source if relation.source is not None else relation.owner
+  return relation.node.source if relation.node.source is not None else relation.owner
 
 
 def _is_subtype(
@@ -224,11 +224,11 @@ def _collect_mediations(
 
   for relation in index.relations:
     source = _endpoint_source(relation)
-    target = relation.target
+    target = relation.node.target
     source_info = index.classes.get(source) if source is not None else None
     target_info = index.classes.get(target)
 
-    if relation.stereotype == "mediation":
+    if relation.node.stereotype == "mediation":
       if source_info is not None and source_info.coerced_stereotype == RELATOR:
         mediations.append((source_info, target, relation))
 
@@ -236,7 +236,7 @@ def _collect_mediations(
         if source is not None:
           mediations.append((target_info, source, relation))
 
-    elif relation.stereotype == "material":
+    elif relation.node.stereotype == "material":
       if (
         source_info is not None
         and source_info.coerced_stereotype == RELATOR
@@ -268,13 +268,13 @@ def _material_coercion(
   return _diagnostic(
     "coercion",
     (
-      f"relação '@material' entre relator '{relator.name}' e role "
+      f"relação '@material' entre relator '{relator.node.name}' e role "
       f"'{role_name}' tratada como mediação "
       "(coerção @material -> @mediation)."
     ),
     relation,
     (
-      f"declare a relação entre '{relator.name}' e '{role_name}' "
+      f"declare a relação entre '{relator.node.name}' e '{role_name}' "
       "explicitamente como '@mediation'."
     ),
   )
@@ -287,21 +287,21 @@ def _general_error(
   """Gera o erro de role sem general ou com general fora dos aceitos."""
 
   if parent_infos:
-    invalid = ", ".join(parent.name for parent in parent_infos)
+    invalid = ", ".join(parent.node.name for parent in parent_infos)
     message = (
-      f"role '{info.name}' especializa general inválido ({invalid}); "
+      f"role '{info.node.name}' especializa general inválido ({invalid}); "
       "o padrão Role exige um general kind, subkind, collective, phase, "
       "role ou roleMixin."
     )
   else:
-    message = f"role '{info.name}' não declara um general válido para o padrão Role."
+    message = f"role '{info.node.name}' não declara um general válido para o padrão Role."
 
   return _diagnostic(
     "error",
     message,
     info,
     (
-      f"faça '{info.name}' especializar kind, subkind, collective, phase, "
+      f"faça '{info.node.name}' especializar kind, subkind, collective, phase, "
       "role ou roleMixin."
     ),
   )
@@ -322,12 +322,12 @@ def _inherited_dependency(
   return _diagnostic(
     "deduction",
     (
-      f"role '{info.name}' não é mediado diretamente, mas herda a dependência "
+      f"role '{info.node.name}' não é mediado diretamente, mas herda a dependência "
       f"relacional do supertipo mediado '{', '.join(supertypes)}'."
     ),
     info,
     (
-      f"declare explicitamente '@mediation' para '{info.name}' ou mantenha a "
+      f"declare explicitamente '@mediation' para '{info.node.name}' ou mantenha a "
       "dependência relacional via supertipo."
     ),
   )
@@ -348,7 +348,7 @@ def _check_genset(
     siblings = [
       other
       for other in index.classes.values()
-      if other.coerced_stereotype == "role" and general.name in other.specializes
+      if other.coerced_stereotype == "role" and general.node.name in other.specializes
     ]
 
     # `next` devolve o primeiro genset que satisfaz a condição
@@ -356,12 +356,12 @@ def _check_genset(
       (
         candidate
         for candidate in index.gensets
-        if candidate.general == general.name and info.name in candidate.specifics
+        if candidate.node.general == general.node.name and info.node.name in candidate.node.specifics
       ),
       None,
     )
 
-    if len(siblings) == 1 and siblings[0].name == info.name:
+    if len(siblings) == 1 and siblings[0].node.name == info.node.name:
       return True, genset
 
     if genset is not None:
@@ -377,7 +377,7 @@ def _relator_refs(relevant: list[Mediation]) -> tuple[ElementRef, ...]:
   seen: set[tuple[str, int]] = set()
 
   for relator, _, _ in relevant:
-    key = (relator.name, relator.line)
+    key = (relator.node.name, relator.node.line)
 
     if key in seen:
       continue

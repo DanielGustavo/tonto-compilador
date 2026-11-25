@@ -55,9 +55,9 @@ def analyze_subkind_patterns(index: OntologyIndex) -> SubkindReport:
 def _ref(info) -> ElementRef:
   """Converte uma classe ou genset em uma referência de relatório"""
   return ElementRef(
-    name=info.name,
-    line=info.line,
-    column=info.column,
+    name=info.node.name,
+    line=info.node.line,
+    column=info.node.column,
     origin=info.origin,
   )
 
@@ -73,8 +73,8 @@ def _diagnostic(
     category=category,
     pattern=PATTERN,
     message=message,
-    line=info.line,
-    column=info.column,
+    line=info.node.line,
+    column=info.node.column,
     origin=info.origin,
     suggestion=suggestion,
   )
@@ -115,31 +115,31 @@ def _coerce_declared_kinds(
 
   def resolve(info) -> None:
     """Resolve recursivamente o estereótipo coercido de `info` e dos seus pais"""
-    if info.name in resolved or info.name in visiting:
+    if info.node.name in resolved or info.node.name in visiting:
       return
 
-    if info.declared_stereotype != "kind" or not info.specializes:
-      resolved.add(info.name)
+    if info.node.stereotype != "kind" or not info.specializes:
+      resolved.add(info.node.name)
       return
 
-    if _has_inheritance_cycle(info.name, index, set()):
-      if info.name not in reported_cycles:
-        reported_cycles.add(info.name)
+    if _has_inheritance_cycle(info.node.name, index, set()):
+      if info.node.name not in reported_cycles:
+        reported_cycles.add(info.node.name)
         errors.append(
           _diagnostic(
             "error",
             (
-              f"kind '{info.name}' participa de um ciclo de especialização. "
+              f"kind '{info.node.name}' participa de um ciclo de especialização. "
               "Não foi possível coercer kind -> subkind."
             ),
             info,
             "remova o ciclo em 'specializes' antes de analisar o Subkind.",
           )
         )
-      resolved.add(info.name)
+      resolved.add(info.node.name)
       return
 
-    visiting.add(info.name)
+    visiting.add(info.node.name)
 
     existing = []
     for parent_name in info.specializes:
@@ -151,7 +151,7 @@ def _coerce_declared_kinds(
       resolve(parent)
       existing.append(parent)
 
-    visiting.discard(info.name)
+    visiting.discard(info.node.name)
 
     invalid = [
       parent for parent in existing if parent.coerced_stereotype not in RIGID_SORTALS
@@ -163,12 +163,12 @@ def _coerce_declared_kinds(
           _diagnostic(
             "error",
             (
-              f"kind '{info.name}' especializa '{parent.name}', que é "
+              f"kind '{info.node.name}' especializa '{parent.node.name}', que é "
               "não-sortal. Não foi possível coercer kind -> subkind."
             ),
             info,
             (
-              f"faça '{info.name}' especializar um kind, subkind ou "
+              f"faça '{info.node.name}' especializar um kind, subkind ou "
               "collective, ou remova o 'specializes'."
             ),
           )
@@ -179,19 +179,19 @@ def _coerce_declared_kinds(
         _diagnostic(
           "coercion",
           (
-            f"kind '{info.name}' especializa sortal rígido, estereótipo "
+            f"kind '{info.node.name}' especializa sortal rígido, estereótipo "
             "coercido de 'kind' para 'subkind'."
           ),
           info,
           (
-            f"declare '{info.name}' explicitamente como 'subkind "
-            f"{info.name} specializes {', '.join(info.specializes)}' "
+            f"declare '{info.node.name}' explicitamente como 'subkind "
+            f"{info.node.name} specializes {', '.join(info.specializes)}' "
             "(coerção kind -> subkind)."
           ),
         )
       )
 
-    resolved.add(info.name)
+    resolved.add(info.node.name)
 
   for info in index.classes.values():
     resolve(info)
@@ -212,10 +212,10 @@ def has_identity_provider(
 
   seen = set() if seen is None else seen
 
-  if info.name in seen:
+  if info.node.name in seen:
     return False
 
-  seen.add(info.name)
+  seen.add(info.node.name)
 
   for parent_name in info.specializes:
     parent = index.classes.get(parent_name)
@@ -247,7 +247,7 @@ def _variant_two(
   """
 
   for genset in index.gensets:
-    general = index.classes.get(genset.general)
+    general = index.classes.get(genset.node.general)
 
     # Gensets de Phase/Role (ou cujo general ainda não é sortal rígido) não
     # pertencem ao padrão Subkind.
@@ -257,7 +257,7 @@ def _variant_two(
     specific_infos = []
     valid = True
 
-    for name in genset.specifics:
+    for name in genset.node.specifics:
       info = index.classes.get(name)
 
       if info is None or info.coerced_stereotype != "subkind":
@@ -273,7 +273,7 @@ def _variant_two(
     valid = True
 
     for info in specific_infos:
-      if general.name in info.specializes:
+      if general.node.name in info.specializes:
         continue
 
       if not info.specializes:
@@ -285,25 +285,25 @@ def _variant_two(
         _diagnostic(
           "error",
           (
-            f"'{info.name}' não especializa o general "
-            f"'{general.name}' do genset '{genset.name}'."
+            f"'{info.node.name}' não especializa o general "
+            f"'{general.node.name}' do genset '{genset.node.name}'."
           ),
           info,
           (
-            f"faça '{info.name}' especializar '{general.name}' ou remova-o "
-            f"do genset '{genset.name}'."
+            f"faça '{info.node.name}' especializar '{general.node.name}' ou remova-o "
+            f"do genset '{genset.node.name}'."
           ),
         )
       )
 
-    if genset.disjointness != "disjoint":
+    if genset.node.disjointness != "disjoint":
       valid = False
       errors.append(
         _diagnostic(
           "error",
-          f"genset de subkinds '{genset.name}' deve ser disjoint.",
+          f"genset de subkinds '{genset.node.name}' deve ser disjoint.",
           genset,
-          (f"declare '{genset.name}' como 'disjoint' (opcionalmente 'complete')."),
+          (f"declare '{genset.node.name}' como 'disjoint' (opcionalmente 'complete')."),
         )
       )
 
@@ -314,7 +314,7 @@ def _variant_two(
     # checagem de identidade dos específicos considere o general. Se o genset
     # não passar na checagem, elas são removidas e nenhuma dedução é reportada.
     for info in pending_deductions:
-      info.specializes.append(general.name)
+      info.specializes.append(general.node.name)
 
     if not has_identity_provider(general, index):
       valid = False
@@ -322,12 +322,12 @@ def _variant_two(
         _diagnostic(
           "error",
           (
-            f"o general '{general.name}' do genset '{genset.name}' não "
+            f"o general '{general.node.name}' do genset '{genset.node.name}' não "
             "alcança um kind/collective provedor de identidade."
           ),
           general,
           (
-            f"faça '{general.name}' especializar direta ou indiretamente um "
+            f"faça '{general.node.name}' especializar direta ou indiretamente um "
             "kind ou collective."
           ),
         )
@@ -342,12 +342,12 @@ def _variant_two(
         _diagnostic(
           "error",
           (
-            f"o específico '{info.name}' do genset '{genset.name}' não "
+            f"o específico '{info.node.name}' do genset '{genset.node.name}' não "
             "alcança um kind/collective provedor de identidade."
           ),
           info,
           (
-            f"faça '{info.name}' especializar direta ou indiretamente um "
+            f"faça '{info.node.name}' especializar direta ou indiretamente um "
             "kind ou collective."
           ),
         )
@@ -355,7 +355,7 @@ def _variant_two(
 
     if not valid:
       for info in pending_deductions:
-        info.specializes.remove(general.name)
+        info.specializes.remove(general.node.name)
       continue
 
     for info in pending_deductions:
@@ -363,14 +363,14 @@ def _variant_two(
         _diagnostic(
           "deduction",
           (
-            f"'{info.name}' não declara 'specializes "
-            f"{general.name}', mas o genset '{genset.name}' o agrupa sob "
-            f"'{general.name}'."
+            f"'{info.node.name}' não declara 'specializes "
+            f"{general.node.name}', mas o genset '{genset.node.name}' o agrupa sob "
+            f"'{general.node.name}'."
           ),
           info,
           (
-            f"declare explicitamente 'subkind {info.name} specializes "
-            f"{general.name}' (dedução pela sobrecarga do genset)."
+            f"declare explicitamente 'subkind {info.node.name} specializes "
+            f"{general.node.name}' (dedução pela sobrecarga do genset)."
           ),
         )
       )
@@ -378,9 +378,9 @@ def _variant_two(
     deduced = bool(pending_deductions)
     lines = sorted(
       {
-        genset.line,
-        general.line,
-        *(info.line for info in specific_infos),
+        genset.node.line,
+        general.node.line,
+        *(info.node.line for info in specific_infos),
       }
     )
 
@@ -391,13 +391,13 @@ def _variant_two(
         specifics=tuple(_ref(info) for info in specific_infos),
         genset=_ref(genset),
         lines=tuple(lines),
-        disjointness=genset.disjointness,
-        completeness=genset.completeness,
+        disjointness=genset.node.disjointness,
+        completeness=genset.node.completeness,
         deduced=deduced,
       )
     )
 
-    covered.update(info.name for info in specific_infos)
+    covered.update(info.node.name for info in specific_infos)
 
 
 # Variante 1 do Subkind pattern: um subkind especializando diretamente um
@@ -416,16 +416,16 @@ def _variant_one(
   """
 
   for info in index.classes.values():
-    if info.coerced_stereotype != "subkind" or info.name in covered:
+    if info.coerced_stereotype != "subkind" or info.node.name in covered:
       continue
 
     if not info.specializes:
       errors.append(
         _diagnostic(
           "error",
-          f"subkind '{info.name}' não declara nenhum general.",
+          f"subkind '{info.node.name}' não declara nenhum general.",
           info,
-          f"adicione 'specializes <General>' à declaração de '{info.name}'.",
+          f"adicione 'specializes <General>' à declaração de '{info.node.name}'.",
         )
       )
       continue
@@ -456,12 +456,12 @@ def _variant_one(
           _diagnostic(
             "error",
             (
-              f"subkind '{info.name}' especializa '{parent.name}', mas "
+              f"subkind '{info.node.name}' especializa '{parent.node.name}', mas "
               "subkind só pode especializar sortal rígido "
               "(kind, subkind ou collective)."
             ),
             info,
-            (f"faça '{info.name}' especializar um kind, subkind ou collective."),
+            (f"faça '{info.node.name}' especializar um kind, subkind ou collective."),
           )
         )
       continue
@@ -471,19 +471,19 @@ def _variant_one(
         _diagnostic(
           "error",
           (
-            f"subkind '{info.name}' não alcança um kind/collective "
+            f"subkind '{info.node.name}' não alcança um kind/collective "
             "provedor de identidade."
           ),
           info,
           (
-            f"faça '{info.name}' especializar direta ou indiretamente um "
+            f"faça '{info.node.name}' especializar direta ou indiretamente um "
             "kind ou collective."
           ),
         )
       )
       continue
 
-    lines = sorted({info.line, *(parent.line for parent in parents)})
+    lines = sorted({info.node.line, *(parent.node.line for parent in parents)})
 
     matches.append(
       SubkindMatch(
