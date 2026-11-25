@@ -1,90 +1,29 @@
 from table_printer import print_table
 
-from .model import (
-  ModeMatch,
+from .core.model import (
+  ElementRef,
   PatternDiagnostic,
   PatternReport,
-  PhaseMatch,
-  RelatorMatch,
-  RoleMatch,
-  RoleMixinMatch,
-  SubkindMatch,
 )
 
 
-def _origins(match: SubkindMatch) -> str:
+def _origins(*groups: tuple[ElementRef, ...], genset: ElementRef | None = None) -> str:
+  """Lista os pacotes de origem das referências"""
+
   origins: list[str] = []
 
-  for ref in (*match.generals, *match.specifics):
-    if ref.origin and ref.origin not in origins:
-      origins.append(ref.origin)
+  for group in groups:
+    for ref in group:
+      if ref.origin and ref.origin not in origins:
+        origins.append(ref.origin)
 
-  if match.genset is not None and match.genset.origin not in origins:
-    origins.append(match.genset.origin)
+  if genset is not None and genset.origin not in origins:
+    origins.append(genset.origin)
 
   return ", ".join(origins) if origins else "-"
 
 
-def _phase_origins(match: PhaseMatch) -> str:
-  origins: list[str] = []
-
-  for ref in (match.general, *match.specifics):
-    if ref.origin and ref.origin not in origins:
-      origins.append(ref.origin)
-
-  if match.genset is not None and match.genset.origin not in origins:
-    origins.append(match.genset.origin)
-
-  return ", ".join(origins) if origins else "-"
-
-
-def _role_origins(match: RoleMatch) -> str:
-  origins: list[str] = []
-
-  for ref in (match.role, *match.generals, *match.relators):
-    if ref.origin and ref.origin not in origins:
-      origins.append(ref.origin)
-
-  if match.genset is not None and match.genset.origin not in origins:
-    origins.append(match.genset.origin)
-
-  return ", ".join(origins) if origins else "-"
-
-
-def _relator_origins(match: RelatorMatch) -> str:
-  origins: list[str] = []
-
-  for ref in (match.relator, *match.mediated, *match.materials):
-    if ref.origin and ref.origin not in origins:
-      origins.append(ref.origin)
-
-  return ", ".join(origins) if origins else "-"
-
-
-def _mode_origins(match: ModeMatch) -> str:
-  origins: list[str] = []
-
-  for ref in (match.mode, *match.hosts, *match.external_dependencies):
-    if ref.origin and ref.origin not in origins:
-      origins.append(ref.origin)
-
-  return ", ".join(origins) if origins else "-"
-
-
-def _role_mixin_origins(match: RoleMixinMatch) -> str:
-  origins: list[str] = []
-
-  for ref in (match.role_mixin, *match.roles, *match.relators):
-    if ref.origin and ref.origin not in origins:
-      origins.append(ref.origin)
-
-  if match.genset is not None and match.genset.origin not in origins:
-    origins.append(match.genset.origin)
-
-  return ", ".join(origins) if origins else "-"
-
-
-def _format_genset(match: SubkindMatch | PhaseMatch) -> str:
+def _format_genset(match) -> str:
   if match.genset is None:
     return "-"
 
@@ -105,6 +44,21 @@ def _print_diagnostic(diagnostic: PatternDiagnostic) -> None:
     print(f"    sugestão: {diagnostic.suggestion}")
 
 
+def _print_diagnostics(
+  groups: list[list[PatternDiagnostic]],
+  empty_message: str,
+) -> None:
+  printed = False
+
+  for group in groups:
+    for diagnostic in group:
+      printed = True
+      _print_diagnostic(diagnostic)
+
+  if not printed:
+    print(empty_message)
+
+
 def print_pattern_report(report: PatternReport) -> None:
   subkind = report.subkind
   phase = report.phase
@@ -112,6 +66,8 @@ def print_pattern_report(report: PatternReport) -> None:
   relator = report.relator
   mode = report.mode
   role_mixin = report.role_mixin
+
+  results = [subkind, phase, role, relator, mode, role_mixin]
 
   print("\n============ PADRÕES DE PROJETO ============")
 
@@ -125,7 +81,7 @@ def print_pattern_report(report: PatternReport) -> None:
       [
         (
           str(match.variant),
-          _origins(match),
+          _origins(match.generals, match.specifics, genset=match.genset),
           ", ".join(ref.name for ref in match.generals),
           ", ".join(ref.name for ref in match.specifics),
           _format_genset(match),
@@ -148,7 +104,11 @@ def print_pattern_report(report: PatternReport) -> None:
           match.general.name,
           ", ".join(ref.name for ref in match.specifics),
           _format_genset(match),
-          _phase_origins(match),
+          _origins(
+            (match.general,),
+            match.specifics,
+            genset=match.genset,
+          ),
           ", ".join(str(line) for line in match.lines),
         )
         for match in ordered_phases
@@ -169,7 +129,12 @@ def print_pattern_report(report: PatternReport) -> None:
           ", ".join(ref.name for ref in match.generals),
           ", ".join(ref.name for ref in match.relators) or "-",
           match.genset.name if match.genset is not None else "-",
-          _role_origins(match),
+          _origins(
+            (match.role,),
+            match.generals,
+            match.relators,
+            genset=match.genset,
+          ),
           ", ".join(str(line) for line in match.lines),
         )
         for match in ordered_roles
@@ -190,7 +155,7 @@ def print_pattern_report(report: PatternReport) -> None:
           match.relator.name,
           ", ".join(ref.name for ref in match.mediated),
           ", ".join(ref.name for ref in match.materials) or "-",
-          _relator_origins(match),
+          _origins((match.relator,), match.mediated, match.materials),
           ", ".join(str(line) for line in match.lines),
         )
         for match in ordered_relators
@@ -210,7 +175,7 @@ def print_pattern_report(report: PatternReport) -> None:
           match.mode.name,
           ", ".join(ref.name for ref in match.hosts),
           ", ".join(ref.name for ref in match.external_dependencies) or "-",
-          _mode_origins(match),
+          _origins((match.mode,), match.hosts, match.external_dependencies),
           ", ".join(str(line) for line in match.lines),
         )
         for match in ordered_modes
@@ -240,7 +205,12 @@ def print_pattern_report(report: PatternReport) -> None:
           ", ".join(ref.name for ref in match.roles) or "-",
           ", ".join(ref.name for ref in match.relators) or "-",
           match.genset.name if match.genset is not None else "-",
-          _role_mixin_origins(match),
+          _origins(
+            (match.role_mixin,),
+            match.roles,
+            match.relators,
+            genset=match.genset,
+          ),
           ", ".join(str(line) for line in match.lines),
         )
         for match in ordered_role_mixins
@@ -252,108 +222,21 @@ def print_pattern_report(report: PatternReport) -> None:
 
   print("\n(2) ERROS A SEREM CORRIGIDOS POR COERÇÃO")
 
-  if subkind.coercions:
-    for coercion in subkind.coercions:
-      _print_diagnostic(coercion)
-
-  if phase.coercions:
-    for coercion in phase.coercions:
-      _print_diagnostic(coercion)
-
-  if role.coercions:
-    for coercion in role.coercions:
-      _print_diagnostic(coercion)
-
-  if relator.coercions:
-    for coercion in relator.coercions:
-      _print_diagnostic(coercion)
-
-  if mode.coercions:
-    for coercion in mode.coercions:
-      _print_diagnostic(coercion)
-
-  if role_mixin.coercions:
-    for coercion in role_mixin.coercions:
-      _print_diagnostic(coercion)
-
-  if (
-    not subkind.coercions
-    and not phase.coercions
-    and not role.coercions
-    and not relator.coercions
-    and not mode.coercions
-    and not role_mixin.coercions
-  ):
-    print("  Nenhuma coerção encontrada.")
+  _print_diagnostics(
+    [result.coercions for result in results],
+    "  Nenhuma coerção encontrada.",
+  )
 
   print("\n  Erros de padrão não coercíveis:")
 
-  if subkind.errors:
-    for error in subkind.errors:
-      _print_diagnostic(error)
-
-  if phase.errors:
-    for error in phase.errors:
-      _print_diagnostic(error)
-
-  if role.errors:
-    for error in role.errors:
-      _print_diagnostic(error)
-
-  if relator.errors:
-    for error in relator.errors:
-      _print_diagnostic(error)
-
-  if mode.errors:
-    for error in mode.errors:
-      _print_diagnostic(error)
-
-  if role_mixin.errors:
-    for error in role_mixin.errors:
-      _print_diagnostic(error)
-
-  if (
-    not subkind.errors
-    and not phase.errors
-    and not role.errors
-    and not relator.errors
-    and not mode.errors
-    and not role_mixin.errors
-  ):
-    print("  Nenhum erro de padrão encontrado.")
+  _print_diagnostics(
+    [result.errors for result in results],
+    "  Nenhum erro de padrão encontrado.",
+  )
 
   print("\n(3) PADRÕES INCOMPLETOS DEDUZIDOS POR SOBRECARGA")
 
-  if subkind.deductions:
-    for deduction in subkind.deductions:
-      _print_diagnostic(deduction)
-
-  if phase.deductions:
-    for deduction in phase.deductions:
-      _print_diagnostic(deduction)
-
-  if role.deductions:
-    for deduction in role.deductions:
-      _print_diagnostic(deduction)
-
-  if relator.deductions:
-    for deduction in relator.deductions:
-      _print_diagnostic(deduction)
-
-  if mode.deductions:
-    for deduction in mode.deductions:
-      _print_diagnostic(deduction)
-
-  if role_mixin.deductions:
-    for deduction in role_mixin.deductions:
-      _print_diagnostic(deduction)
-
-  if (
-    not subkind.deductions
-    and not phase.deductions
-    and not role.deductions
-    and not relator.deductions
-    and not mode.deductions
-    and not role_mixin.deductions
-  ):
-    print("  Nenhum padrão incompleto deduzido.")
+  _print_diagnostics(
+    [result.deductions for result in results],
+    "  Nenhum padrão incompleto deduzido.",
+  )

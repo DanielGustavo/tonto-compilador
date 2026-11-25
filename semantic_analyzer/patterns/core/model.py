@@ -4,7 +4,8 @@ Cada `Info` guarda o nó da AST em `node` e acrescenta o estado que existe
 apenas na análise (`coerced_stereotype`, `origin`, `owner`)
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Generic, TypeVar
 
 from syntax_analyzer import ast_nodes
 
@@ -68,6 +69,11 @@ class RelationInfo:
     origin: str,
   ) -> "RelationInfo":
     return cls(node=node, owner=owner, origin=origin)
+
+  def endpoint_source(self) -> str | None:
+    """Devolve o lado de origem: `source` explícito ou `owner` da relação interna"""
+
+    return self.node.source if self.node.source is not None else self.owner
 
 
 @dataclass(frozen=True)
@@ -144,52 +150,23 @@ class RoleMixinMatch:
   deduced: bool = False
 
 
-@dataclass
-class SubkindReport:
-  matches: list[SubkindMatch]
-  coercions: list[PatternDiagnostic]
-  deductions: list[PatternDiagnostic]
-  errors: list[PatternDiagnostic]
+T = TypeVar("T")
 
 
 @dataclass
-class PhaseReport:
-  matches: list[PhaseMatch]
-  coercions: list[PatternDiagnostic]
-  deductions: list[PatternDiagnostic]
-  errors: list[PatternDiagnostic]
+class PatternResult(Generic[T]):
+  matches: list[T] = field(default_factory=list)
+  coercions: list[PatternDiagnostic] = field(default_factory=list)
+  deductions: list[PatternDiagnostic] = field(default_factory=list)
+  errors: list[PatternDiagnostic] = field(default_factory=list)
 
 
-@dataclass
-class RoleReport:
-  matches: list[RoleMatch]
-  coercions: list[PatternDiagnostic]
-  deductions: list[PatternDiagnostic]
-  errors: list[PatternDiagnostic]
-
-
-@dataclass
-class RelatorReport:
-  matches: list[RelatorMatch]
-  coercions: list[PatternDiagnostic]
-  deductions: list[PatternDiagnostic]
-  errors: list[PatternDiagnostic]
-
-
-@dataclass
-class ModeReport:
-  matches: list[ModeMatch]
-  coercions: list[PatternDiagnostic]
-  deductions: list[PatternDiagnostic]
-  errors: list[PatternDiagnostic]
-
-
-@dataclass
-class RoleMixinReport:
-  matches: list[RoleMixinMatch]
-  coercions: list[PatternDiagnostic]
-  deductions: list[PatternDiagnostic]
-  errors: list[PatternDiagnostic]
+SubkindReport = PatternResult[SubkindMatch]
+PhaseReport = PatternResult[PhaseMatch]
+RoleReport = PatternResult[RoleMatch]
+RelatorReport = PatternResult[RelatorMatch]
+ModeReport = PatternResult[ModeMatch]
+RoleMixinReport = PatternResult[RoleMixinMatch]
 
 
 @dataclass

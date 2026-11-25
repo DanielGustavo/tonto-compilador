@@ -5,23 +5,22 @@ matcher confere os roles, o genset opcional e a dependência relacional, e
 também converte category/mixin em roleMixin quando só há roles.
 """
 
-from .index import OntologyIndex
-from .model import (
+from ..core.hierarchy import children, has_identity_provider, rigid_children
+from ..core.index import OntologyIndex
+from ..core.mediation import collect_mediation_edges
+from ..core.model import (
   ClassInfo,
-  ElementRef,
   GensetInfo,
   PatternDiagnostic,
   RelationInfo,
   RoleMixinMatch,
   RoleMixinReport,
 )
-from .subkind import has_identity_provider
+from ..core.stereotypes import MIXIN_STEREOTYPES, ROLE, ROLE_MIXIN
+from ..core.utils import diagnostic, ref_of, unique_refs
 
 PATTERN = "RoleMixin"
-ROLE_MIXIN = "roleMixin"
-ROLE = "role"
-RIGID_SORTALS = {"kind", "subkind", "collective"}
-MIXIN_STEREOTYPES = {"category", "mixin"}
+
 MIN_ROLES = 2
 
 Mediation = tuple[ClassInfo, RelationInfo]
@@ -51,17 +50,17 @@ def analyze_role_mixin_patterns(index: OntologyIndex) -> RoleMixinReport:
       continue
 
     # roleMixin é anti-rígido: não pode ser supertipo de um universal rígido
-    rigid_children = _rigid_children(index, info.node.name)
+    rigid = rigid_children(index, info.node.name)
 
-    if rigid_children:
-      for child in rigid_children:
+    if rigid:
+      for child in rigid:
         errors.append(_rigid_child_error(info, child))
 
       continue
 
     parent_mixins = _parent_role_mixins(index, info)
     roles, genset, pending, genset_ok = _validate_genset(
-      index, info, _role_children(index, info.node.name), errors
+      index, info, children(index, info.node.name, stereotype=ROLE), errors
     )
 
     if not genset_ok:
@@ -91,11 +90,11 @@ def analyze_role_mixin_patterns(index: OntologyIndex) -> RoleMixinReport:
     for role in pending:
       deductions.append(_deduced_edge(role, info, genset))
 
-    relators = _relator_refs(relevant)
+    relators = unique_refs([relator for relator, _ in relevant])
     lines = {
       info.node.line,
       *(role.node.line for role in roles),
-      *(relator.node.line for relator, _ in relevant),
+      *(relator.line for relator in relators),
       *(relation.node.line for _, relation in relevant),
     }
 
@@ -105,10 +104,10 @@ def analyze_role_mixin_patterns(index: OntologyIndex) -> RoleMixinReport:
     matches.append(
       RoleMixinMatch(
         variant=1 if parent_mixins else 2,
-        role_mixin=_ref(info),
-        roles=tuple(_ref(role) for role in roles),
+        role_mixin=ref_of(info),
+        roles=tuple(ref_of(role) for role in roles),
         relators=relators,
-        genset=_ref(genset) if genset is not None else None,
+        genset=ref_of(genset) if genset is not None else None,
         lines=tuple(sorted(lines)),
         deduced=bool(pending) or ancestor != info.node.name,
       )
@@ -120,58 +119,6 @@ def analyze_role_mixin_patterns(index: OntologyIndex) -> RoleMixinReport:
     deductions=deductions,
     errors=errors,
   )
-
-
-def _ref(info) -> ElementRef:
-  """Converte uma classe ou genset em uma referência de relatório"""
-  return ElementRef(
-    name=info.node.name,
-    line=info.node.line,
-    column=info.node.column,
-    origin=info.origin,
-  )
-
-
-def _diagnostic(
-  category: str,
-  message: str,
-  info,
-  suggestion: str | None = None,
-) -> PatternDiagnostic:
-  """Cria um diagnóstico do RoleMixin usando linha, coluna e origem do nó"""
-  return PatternDiagnostic(
-    category=category,
-    pattern=PATTERN,
-    message=message,
-    line=info.node.line,
-    column=info.node.column,
-    origin=info.origin,
-    suggestion=suggestion,
-  )
-
-
-def _endpoint_source(relation: RelationInfo) -> str | None:
-  """Devolve o lado de origem: `source` explícito ou `owner` da relação interna"""
-  return relation.node.source if relation.node.source is not None else relation.owner
-
-
-def _children(index: OntologyIndex, name: str) -> list[ClassInfo]:
-  """Devolve as classes que especializam `name` diretamente"""
-  return [info for info in index.classes.values() if name in info.specializes]
-
-
-def _role_children(index: OntologyIndex, name: str) -> list[ClassInfo]:
-  """Devolve os roles que especializam `name` diretamente"""
-  return [child for child in _children(index, name) if child.coerced_stereotype == ROLE]
-
-
-def _rigid_children(index: OntologyIndex, name: str) -> list[ClassInfo]:
-  """Devolve os filhos rígidos de `name`, que são inválidos sob um roleMixin"""
-  return [
-    child
-    for child in _children(index, name)
-    if child.coerced_stereotype in RIGID_SORTALS
-  ]
 
 
 def _parent_role_mixins(index: OntologyIndex, info: ClassInfo) -> list[ClassInfo]:
@@ -202,19 +149,20 @@ def _coerce_mixins_to_role_mixin(
     if info.coerced_stereotype not in MIXIN_STEREOTYPES:
       continue
 
-    children = _children(index, info.node.name)
+    current_children = children(index, info.node.name)
 
-    if not children:
+    if not current_children:
       continue
 
-    if not all(child.coerced_stereotype == ROLE for child in children):
+    if not all(child.coerced_stereotype == ROLE for child in current_children):
       continue
 
     declared = info.coerced_stereotype
     info.coerced_stereotype = ROLE_MIXIN
-    names = ", ".join(child.node.name for child in children)
+    names = ", ".join(child.node.name for child in current_children)
     coercions.append(
-      _diagnostic(
+      diagnostic(
+        PATTERN,
         "coercion",
         (
           f"classe '{info.node.name}' declarada '{declared}' agrega apenas roles "
@@ -239,28 +187,13 @@ def _collect_mediations(index: OntologyIndex) -> dict[str, list[Mediation]]:
   """
   mediations: dict[str, list[Mediation]] = {}
 
-  for relation in index.relations:
-    if relation.node.stereotype not in {"mediation", "material"}:
+  for edge in collect_mediation_edges(index):
+    other = edge.other
+
+    if other is None or other.coerced_stereotype != ROLE_MIXIN:
       continue
 
-    source = _endpoint_source(relation)
-    source_info = index.classes.get(source) if source is not None else None
-    target_info = index.classes.get(relation.node.target)
-
-    if source_info is None or target_info is None:
-      continue
-
-    if (
-      source_info.coerced_stereotype == "relator"
-      and target_info.coerced_stereotype == ROLE_MIXIN
-    ):
-      mediations.setdefault(target_info.node.name, []).append((source_info, relation))
-
-    elif (
-      target_info.coerced_stereotype == "relator"
-      and source_info.coerced_stereotype == ROLE_MIXIN
-    ):
-      mediations.setdefault(source_info.node.name, []).append((target_info, relation))
+    mediations.setdefault(other.node.name, []).append((edge.relator, edge.relation))
 
   return mediations
 
@@ -298,23 +231,6 @@ def _find_dependence(
   return [], None
 
 
-def _relator_refs(relevant: list[Mediation]) -> tuple[ElementRef, ...]:
-  """Devolve as referências dos relatores sem repetir o mesmo relator"""
-  refs: list[ElementRef] = []
-  seen: set[tuple[str, int]] = set()
-
-  for relator, _ in relevant:
-    key = (relator.node.name, relator.node.line)
-
-    if key in seen:
-      continue
-
-    seen.add(key)
-    refs.append(_ref(relator))
-
-  return tuple(refs)
-
-
 def _validate_genset(
   index: OntologyIndex,
   info: ClassInfo,
@@ -328,7 +244,9 @@ def _validate_genset(
   `specializes` tem a aresta deduzida apenas quando o genset é válido.
   """
 
-  candidates = [genset for genset in index.gensets if genset.node.general == info.node.name]
+  candidates = [
+    genset for genset in index.gensets if genset.node.general == info.node.name
+  ]
 
   if not candidates:
     return list(direct_roles), None, [], True
@@ -343,7 +261,8 @@ def _validate_genset(
       if specific is None:
         valid = False
         errors.append(
-          _diagnostic(
+          diagnostic(
+            PATTERN,
             "error",
             (
               f"genset de roles '{genset.node.name}' referencia a classe "
@@ -358,7 +277,8 @@ def _validate_genset(
       if specific.coerced_stereotype != ROLE:
         valid = False
         errors.append(
-          _diagnostic(
+          diagnostic(
+            PATTERN,
             "error",
             (
               f"genset de roles '{genset.node.name}' do roleMixin '{info.node.name}' "
@@ -376,7 +296,8 @@ def _validate_genset(
     if valid and len(specific_infos) < MIN_ROLES:
       valid = False
       errors.append(
-        _diagnostic(
+        diagnostic(
+          PATTERN,
           "error",
           (
             f"genset de roles '{genset.node.name}' possui {len(specific_infos)} "
@@ -390,7 +311,8 @@ def _validate_genset(
     if genset.node.disjointness != "disjoint":
       valid = False
       errors.append(
-        _diagnostic(
+        diagnostic(
+          PATTERN,
           "error",
           f"genset de roles '{genset.node.name}' deve ser disjoint.",
           genset,
@@ -436,7 +358,8 @@ def _identity_errors(
       continue
 
     errors.append(
-      _diagnostic(
+      diagnostic(
+        PATTERN,
         "error",
         (
           f"role '{role.node.name}' do roleMixin '{info.node.name}' não alcança um "
@@ -454,7 +377,8 @@ def _identity_errors(
 def _rigid_child_error(info: ClassInfo, child: ClassInfo) -> PatternDiagnostic:
   """Gera o erro de roleMixin que é supertipo de um universal rígido"""
 
-  return _diagnostic(
+  return diagnostic(
+    PATTERN,
     "error",
     (
       f"roleMixin '{info.node.name}' é anti-rígido e não pode ser supertipo do "
@@ -472,7 +396,8 @@ def _rigid_child_error(info: ClassInfo, child: ClassInfo) -> PatternDiagnostic:
 def _no_roles(info: ClassInfo) -> PatternDiagnostic:
   """Gera a dedução de roleMixin sem roles especializando"""
 
-  return _diagnostic(
+  return diagnostic(
+    PATTERN,
     "deduction",
     (
       f"roleMixin '{info.node.name}' não possui roles que o especializem nem "
@@ -489,7 +414,8 @@ def _no_roles(info: ClassInfo) -> PatternDiagnostic:
 def _no_dependence(info: ClassInfo) -> PatternDiagnostic:
   """Gera a dedução de roleMixin sem relator/mediação"""
 
-  return _diagnostic(
+  return diagnostic(
+    PATTERN,
     "deduction",
     (
       f"roleMixin '{info.node.name}' não participa de uma dependência relacional "
@@ -507,7 +433,8 @@ def _no_dependence(info: ClassInfo) -> PatternDiagnostic:
 def _inherited_dependence(info: ClassInfo, ancestor: str | None) -> PatternDiagnostic:
   """Gera a dedução de dependência relacional herdada de um roleMixin"""
 
-  return _diagnostic(
+  return diagnostic(
+    PATTERN,
     "deduction",
     (
       f"roleMixin '{info.node.name}' herda a dependência relacional do roleMixin "
@@ -530,7 +457,8 @@ def _deduced_edge(
 
   genset_name = genset.node.name if genset is not None else "-"
 
-  return _diagnostic(
+  return diagnostic(
+    PATTERN,
     "deduction",
     (
       f"'{role.node.name}' não declara 'specializes {info.node.name}', mas o genset "

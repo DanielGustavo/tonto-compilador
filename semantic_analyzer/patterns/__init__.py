@@ -6,9 +6,8 @@ a fachada usada pelo `main.py`.
 
 from syntax_analyzer import ast_nodes
 
-from .index import OntologyIndex, build_index
-from .mode import analyze_mode_patterns
-from .model import (
+from .core.index import OntologyIndex, build_index
+from .core.model import (
   ClassInfo,
   ElementRef,
   GensetInfo,
@@ -16,6 +15,7 @@ from .model import (
   ModeReport,
   PatternDiagnostic,
   PatternReport,
+  PatternResult,
   PhaseMatch,
   PhaseReport,
   RelationInfo,
@@ -28,12 +28,13 @@ from .model import (
   SubkindMatch,
   SubkindReport,
 )
-from .phase import analyze_phase_patterns
-from .relator import analyze_relator_patterns
+from .matchers.mode import analyze_mode_patterns
+from .matchers.phase import analyze_phase_patterns
+from .matchers.relator import analyze_relator_patterns
+from .matchers.role import analyze_role_patterns
+from .matchers.role_mixin import analyze_role_mixin_patterns
+from .matchers.subkind import analyze_subkind_patterns
 from .reporter import print_pattern_report
-from .role import analyze_role_patterns
-from .role_mixin import analyze_role_mixin_patterns
-from .subkind import analyze_subkind_patterns
 
 __all__ = [
   "ClassInfo",
@@ -44,6 +45,7 @@ __all__ = [
   "OntologyIndex",
   "PatternDiagnostic",
   "PatternReport",
+  "PatternResult",
   "PhaseMatch",
   "PhaseReport",
   "RelationInfo",

@@ -5,42 +5,24 @@ Também aplica a coerção `kind -> mode`, registra as dependências
 externas opcionais e deduz modes sem portador.
 """
 
-from .index import OntologyIndex
-from .model import (
+from ..core.index import OntologyIndex
+from ..core.mediation import relation_endpoints
+from ..core.model import (
   ClassInfo,
-  ElementRef,
   ModeMatch,
   ModeReport,
   PatternDiagnostic,
   RelationInfo,
 )
+from ..core.stereotypes import (
+  ENDURANTS,
+  EXTERNAL_DEPENDENCE_STEREOTYPES,
+  INHERENCE_STEREOTYPES,
+  MODE_STEREOTYPES,
+)
+from ..core.utils import diagnostic, ref_of, unique_refs
 
 PATTERN = "Mode"
-
-MODE_STEREOTYPES = {"mode", "intrisicMode", "extrinsicMode"}
-INHERENCE_STEREOTYPES = {"characterization", "inherence"}
-EXTERNAL_DEPENDENCE_STEREOTYPES = {"externalDependence"}
-
-# universais endurantes aceitos como portador de um mode
-ENDURANTS = {
-  "kind",
-  "subkind",
-  "phase",
-  "role",
-  "roleMixin",
-  "historicalRole",
-  "historicalRoleMixin",
-  "phaseMixin",
-  "category",
-  "mixin",
-  "collective",
-  "quantity",
-  "quality",
-  "relator",
-  "mode",
-  "intrisicMode",
-  "extrinsicMode",
-}
 
 # (portador, relação de inerência)
 Host = tuple[ClassInfo, RelationInfo]
@@ -82,19 +64,19 @@ def analyze_mode_patterns(index: OntologyIndex) -> ModeReport:
     if not hosts:
       continue
 
-    dependencies = _unique_refs(external.get(info.node.name, []))
+    dependencies = unique_refs(external.get(info.node.name, []))
     lines = {
       info.node.line,
       *(host.node.line for host, _ in hosts),
       *(relation.node.line for _, relation in hosts),
-      *(dependency.node.line for dependency in dependencies),
+      *(dependency.line for dependency in dependencies),
     }
 
     matches.append(
       ModeMatch(
-        mode=_ref(info),
-        hosts=tuple(_ref(host) for host, _ in hosts),
-        external_dependencies=tuple(_ref(dependency) for dependency in dependencies),
+        mode=ref_of(info),
+        hosts=tuple(ref_of(host) for host, _ in hosts),
+        external_dependencies=dependencies,
         lines=tuple(sorted(lines)),
       )
     )
@@ -105,60 +87,6 @@ def analyze_mode_patterns(index: OntologyIndex) -> ModeReport:
     deductions=deductions,
     errors=errors,
   )
-
-
-def _ref(info) -> ElementRef:
-  """Converte uma classe ou relação em uma referência de relatório"""
-
-  name = info.node.name
-
-  if name is None:
-    name = "anônima"
-
-  return ElementRef(
-    name=name,
-    line=info.node.line,
-    column=info.node.column,
-    origin=info.origin,
-  )
-
-
-def _diagnostic(
-  category: str,
-  message: str,
-  info,
-  suggestion: str | None = None,
-) -> PatternDiagnostic:
-  """Cria um diagnóstico do Mode usando linha, coluna e origem do nó"""
-
-  return PatternDiagnostic(
-    category=category,
-    pattern=PATTERN,
-    message=message,
-    line=info.node.line,
-    column=info.node.column,
-    origin=info.origin,
-    suggestion=suggestion,
-  )
-
-
-def _endpoint_source(relation: RelationInfo) -> str | None:
-  """Devolve o lado de origem: `source` explícito ou `owner` da relação interna"""
-
-  return relation.node.source if relation.node.source is not None else relation.owner
-
-
-def _endpoints(
-  relation: RelationInfo,
-  index: OntologyIndex,
-) -> tuple[ClassInfo | None, ClassInfo | None]:
-  """Devolve as classes das duas pontas da relação"""
-
-  source_name = _endpoint_source(relation)
-  source = index.classes.get(source_name) if source_name is not None else None
-  target = index.classes.get(relation.node.target)
-
-  return source, target
 
 
 def _can_coerce_to_mode(info: ClassInfo) -> bool:
@@ -182,7 +110,7 @@ def _coerce_kinds_to_mode(
     if relation.node.stereotype not in INHERENCE_STEREOTYPES:
       continue
 
-    source, target = _endpoints(relation, index)
+    source, target = relation_endpoints(relation, index)
 
     if source is None or target is None:
       continue
@@ -204,7 +132,8 @@ def _coerce_kinds_to_mode(
 
     chosen.coerced_stereotype = "mode"
     coercions.append(
-      _diagnostic(
+      diagnostic(
+        PATTERN,
         "coercion",
         (
           f"classe '{chosen.node.name}' declarada kind participa de inerência com "
@@ -228,7 +157,7 @@ def _collect_inherence(index: OntologyIndex) -> dict[str, list[Host]]:
     if relation.node.stereotype not in INHERENCE_STEREOTYPES:
       continue
 
-    source, target = _endpoints(relation, index)
+    source, target = relation_endpoints(relation, index)
 
     if source is not None and source.coerced_stereotype in MODE_STEREOTYPES:
       if target is not None:
@@ -253,7 +182,7 @@ def _collect_external_dependencies(
     if relation.node.stereotype not in EXTERNAL_DEPENDENCE_STEREOTYPES:
       continue
 
-    source, target = _endpoints(relation, index)
+    source, target = relation_endpoints(relation, index)
 
     if source is not None and source.coerced_stereotype in MODE_STEREOTYPES:
       if target is not None:
@@ -280,7 +209,8 @@ def _valid_hosts(
   for host, relation in entries:
     if host.node.name == info.node.name:
       errors.append(
-        _diagnostic(
+        diagnostic(
+          PATTERN,
           "error",
           f"mode '{info.node.name}' inere ele mesmo.",
           relation,
@@ -291,7 +221,8 @@ def _valid_hosts(
 
     if host.coerced_stereotype not in ENDURANTS:
       errors.append(
-        _diagnostic(
+        diagnostic(
+          PATTERN,
           "error",
           (
             f"mode '{info.node.name}' inere em '{host.node.name}', que é "
@@ -315,28 +246,11 @@ def _valid_hosts(
   return valid
 
 
-def _unique_refs(infos: list[ClassInfo]) -> list[ClassInfo]:
-  """Remove portadores externos repetidos preservando a ordem"""
-
-  unique: list[ClassInfo] = []
-  seen: set[tuple[str, int]] = set()
-
-  for info in infos:
-    key = (info.node.name, info.node.line)
-
-    if key in seen:
-      continue
-
-    seen.add(key)
-    unique.append(info)
-
-  return unique
-
-
 def _incomplete(info: ClassInfo) -> PatternDiagnostic:
   """Gera a dedução de mode sem relação de inerência"""
 
-  return _diagnostic(
+  return diagnostic(
+    PATTERN,
     "deduction",
     (
       f"mode '{info.node.name}' não possui relação de inerência "
