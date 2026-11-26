@@ -1,3 +1,10 @@
+"""Apresentação do relatório de padrões de projeto (ODPs).
+
+Imprime os três blocos da saída `--semantic`: (1) padrões encontrados por
+linhas de código, (2) erros a corrigir por coerção (separados dos erros não
+coercíveis) e (3) padrões incompletos deduzidos por sobrecarga.
+"""
+
 from table_printer import print_table
 
 from .core.model import (

@@ -1,8 +1,9 @@
-"""Apresentação dos resultados da Análise Semântica.
+"""Apresentação dos erros da Análise Semântica.
 
 Paralelo a `lexico_analyzer/reporter.py` e `syntax_analyzer/reporter.py`:
 imprime a lista de `SemanticError` produzida por `semantic_actions.py` e
-`imports.py`.
+`imports.py`. O relatório de padrões de projeto tem reporter próprio em
+`semantic_analyzer/patterns/reporter.py`.
 """
 
 from .errors import SemanticError

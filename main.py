@@ -1,8 +1,8 @@
 """Ponto de entrada do compilador TONTO.
 
 Orquestra o fluxo: escolhe o arquivo de entrada (por argumento ou pelo menu de
-exemplos), chama o Analisador Léxico e/ou o Analisador Sintático e entrega o
-resultado aos módulos de apresentação.
+exemplos), roda as fases léxica, sintática e/ou semântica e entrega o resultado
+aos módulos de apresentação.
 
 Uso:
     python3 main.py

@@ -1,0 +1,14 @@
+package Festa
+
+kind Pessoa
+kind Participante specializes Pessoa
+
+kind Bebida
+subkind Suco
+subkind Refrigerante
+disjoint complete genset TiposDeBebida {
+    general Bebida
+    specifics Suco, Refrigerante
+}
+
+role ConvidadoEspecial

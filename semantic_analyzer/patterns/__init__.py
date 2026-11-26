@@ -1,7 +1,15 @@
-"""Padrões de projeto reconhecidos a partir da AST sintática.
+"""Padrões de projeto de ontologias (ODPs) reconhecidos a partir da AST.
 
-Este pacote roda depois de `semantic_actions.finalize()`, `analyze_patterns` é
-a fachada usada pelo `main.py`.
+Este pacote roda depois do parse e de `semantic_actions.finalize()`,
+`analyze_patterns` é a fachada usada pelo `main.py`. Ele constrói o
+`OntologyIndex` com o pacote principal e as declarações importadas e executa
+na ordem necessária para as coerções não se desfazerem.
+
+Cada matcher devolve um `PatternResult` com quatro listas: `matches` (padrões
+encontrados, com as linhas de código), `coercions` (estereótipos corrigidos por
+coerção), `errors` (erros de padrão não coercíveis) e `deductions` (padrões
+incompletos deduzidos por sobrecarga). O `PatternReport` agrupa os seis
+resultados, e `reporter.py` imprime os três blocos da saída `--semantic`.
 """
 
 from syntax_analyzer import ast_nodes

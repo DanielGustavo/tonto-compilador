@@ -9,7 +9,10 @@ Além da análise léxica, o projeto também faz **análise sintática** (gramá
 PLY/YACC) e **análise semântica** (tabela de símbolos por escopo, resolução
 de `import` entre arquivos `.tonto`), produzindo uma AST e uma **tabela de
 síntese** da ontologia declarada, e reportando erros das três fases sem
-interromper a análise.
+interromper a análise. Sobre a AST, a análise semântica ainda valida **padrões
+de projeto de ontologias (ODPs)**: Subkind, Role, Phase, Relator, Mode e
+RoleMixin, com detecção de coerções, erros não coercíveis e dedução de padrões
+incompletos por sobrecarga.
 
 A automação parcial é feita com **PLY** (versão Python do LEX/YACC).
 
@@ -23,7 +26,8 @@ A automação parcial é feita com **PLY** (versão Python do LEX/YACC).
 3. [Como executar](#como-executar)
     * [Entrada do sistema](#entrada-do-sistema)
     * [Saída do sistema](#saida-do-sistema)
-4. [Conceitos da linguagem reconhecidos](#conceitos-reconhecidos)
+4. [Padrões de projeto de ontologias (ODPs)](#padroes-de-projeto)
+5. [Conceitos da linguagem reconhecidos](#conceitos-reconhecidos)
 
 # <a name="estrutura-do-projeto"></a> Estrutura do Projeto
 
@@ -66,7 +70,12 @@ tonto-compilador/
 │   ├── errors.py                  (SemanticError)
 │   ├── semantic_actions.py        (motor que a gramática chama para declarar/verificar nomes)
 │   ├── imports.py                 (resolve quais imports casam com quais arquivos vizinhos)
-│   └── reporter.py                (erros semânticos)
+│   ├── reporter.py                (erros semânticos)
+│   └── patterns/                  (análise de padrões de projeto sobre a AST)
+│       ├── __init__.py            (fachada: analyze_patterns + tipos de resultado)
+│       ├── reporter.py            (relatório (1) padrões, (2) coerções/erros, (3) deduções)
+│       ├── core/                  (modelo, índice, hierarquia, gensets, mediações)
+│       └── matchers/              (subkind, role, phase, relator, mode, role_mixin)
 │
 └── tonto_examples/                (exemplos .tonto agrupados por cenário)
     ├── pizzaria/
@@ -79,9 +88,7 @@ tonto-compilador/
     │   ├── Pizzaria_MONO.tonto             (mesma ontologia em um único pacote, sem imports)
     │   └── Pizzaria_Erros.tonto            (casos propositais de erro léxico/sintático/semântico)
     ├── hospital/                           (6 arquivos multi-pacote; entrada em UBS.tonto)
-    ├── car/                                (car.tonto e carRental.tonto, pacotes independentes)
-    ├── food_allergy/                       (alergiaalimentar.tonto)
-    ├── tdah/                               (TDAH.tonto)
+    ├── festa/                              (exemplo de coerção, dedução e erro)
     └── design_patterns/                    (exemplos de ODPs)
 ```
 
@@ -238,15 +245,43 @@ tonto-compilador/
       arquivo importado é recebido de fora (parâmetro `parse_file`), pois
       essa mecânica depende do parser PLY, que vive em `syntax_analyzer`.
 
-    * `reporter.py`: apresentação da fase semântica — só a lista de erros
-      semânticos (`print_semantic_errors`), paralelo aos reporters léxico e
-      sintático.
+    * `reporter.py`: apresentação dos erros da fase semântica
+      (`print_semantic_errors`), paralelo aos reporters léxico e sintático. O
+      relatório de padrões tem reporter próprio em `patterns/reporter.py`.
+
+    * `patterns/` (Diretório): a **análise de padrões de projeto de
+      ontologias (ODPs)**, executada depois que o parse e
+      `semantic_actions.finalize()` terminam. É dividida em:
+
+      * `__init__.py`: fachada `analyze_patterns(program, imported)`. Monta o
+        índice da ontologia e roda os matchers na ordem necessária para que as
+        coerções de um padrão não sejam desfeitas por outro; devolve um
+        `PatternReport` com um `PatternResult` por ODP (`matches`, `coercions`,
+        `errors`, `deductions`).
+
+      * `core/`: infraestrutura compartilhada — `model.py` (classes de
+        resultado, `ClassInfo`, diagnósticos), `index.py` (`OntologyIndex` com
+        classes, gensets e relações do pacote e dos imports), `hierarchy.py`
+        (pais, filhos, subtipo, identidade), `genset.py` (arestas ausentes,
+        identidade e dedução), `mediation.py` (mediações/material), `stereotypes.py`
+        (conjuntos de estereótipos aceitos) e `utils.py` (referências e
+        diagnósticos).
+
+      * `matchers/`: um módulo por ODP — `subkind.py`, `role.py`, `phase.py`,
+        `relator.py`, `mode.py` e `role_mixin.py`. Cada matcher reconhece as
+        variantes do padrão, aplica as coerções cabíveis e produz as deduções
+        de padrões incompletos.
+
+      * `reporter.py`: imprime o relatório em três blocos — (1) padrões
+        encontrados por linhas de código, (2) erros a corrigir por coerção
+        (separados dos erros não coercíveis) e (3) padrões incompletos
+        deduzidos por sobrecarga.
 
 * `tonto_examples/` (Diretório)
 
     * Arquivos de código-fonte em TONTO usados como casos de teste,
       agrupados por cenário em subpastas (`pizzaria/`, `hospital/`,
-      `car/`, `food_allergy/`, `tdah/`, `design_patterns/`). O menu do
+      `festa/`, `design_patterns/`). O menu do
       `main.py` percorre a pasta recursivamente e mostra o caminho relativo
       de cada arquivo.
 
@@ -368,15 +403,15 @@ Sem argumento de arquivo, o programa lista os `.tonto` da pasta
 ```
 --- Exemplos TONTO disponíveis ---
 
-[00]  car/car.tonto
-[01]  car/carRental.tonto
-[02]  design_patterns/Mode_Pattern.tonto
+[00]  design_patterns/Mode_Pattern.tonto
 ...
-[19]  hospital/UBS.tonto
+[06]  festa/Festa.tonto
 ...
-[21]  pizzaria/Pizzaria.tonto
+[11]  hospital/UBS.tonto
 ...
-[31]  tdah/TDAH.tonto
+[13]  pizzaria/Pizzaria.tonto
+...
+[22]  pizzaria/Pizzaria_Pizza.tonto
 
 Escolha o número do arquivo a analisar:
 ```
@@ -498,6 +533,58 @@ tabela — cada um com linha, coluna, mensagem e uma sugestão de correção:
 Um `import` que não encontra um arquivo `.tonto` vizinho com o
 `package <Nome>` correspondente também gera um erro semântico
 ("pacote importado '<nome>' não foi encontrado").
+
+**Análise semântica de padrões (ODPs)** com `--semantic`, depois do parse,
+`semantic_analyzer/patterns` valida os seis ODPs e imprime três blocos: (1)
+padrões encontrados por linhas, (2) erros a corrigir por coerção (separados
+dos erros não coercíveis) e (3) padrões incompletos deduzidos por sobrecarga.
+O exemplo abaixo é a saída real de
+`python3 main.py --semantic tonto_examples/festa/Festa.tonto`:
+
+```
+============ PADRÕES DE PROJETO ============
+
+(1) PADRÕES ENCONTRADOS POR LINHAS DE CÓDIGO
+
+Padrões Subkind
+  ┌──────────┬────────┬─────────┬────────────────────┬────────────────────────────────────┬────────────┐
+  │ Variante │ Pacote │ General │ Específicos        │ Genset                             │ Linhas     │
+  ├──────────┼────────┼─────────┼────────────────────┼────────────────────────────────────┼────────────┤
+  │ 1        │ Festa  │ Pessoa  │ Participante       │ -                                  │ 3, 4       │
+  │ 2        │ Festa  │ Bebida  │ Suco, Refrigerante │ TiposDeBebida [disjoint, complete] │ 6, 7, 8, 9 │
+  └──────────┴────────┴─────────┴────────────────────┴────────────────────────────────────┴────────────┘
+
+(2) ERROS A SEREM CORRIGIDOS POR COERÇÃO
+  linha 4, coluna 1 [Festa]: kind 'Participante' especializa sortal rígido, estereótipo coercido de 'kind' para 'subkind'.
+    sugestão: declare 'Participante' explicitamente como 'subkind Participante specializes Pessoa' (coerção kind -> subkind).
+
+  Erros de padrão não coercíveis:
+  linha 14, coluna 1 [Festa]: role 'ConvidadoEspecial' não declara um general válido para o padrão Role.
+    sugestão: faça 'ConvidadoEspecial' especializar kind, subkind, collective, phase, role ou roleMixin.
+
+(3) PADRÕES INCOMPLETOS DEDUZIDOS POR SOBRECARGA
+  linha 7, coluna 1 [Festa]: 'Suco' não declara 'specializes Bebida', mas o genset 'TiposDeBebida' o agrupa sob 'Bebida'.
+    sugestão: declare explicitamente 'subkind Suco specializes Bebida' (dedução pela sobrecarga do genset).
+  linha 8, coluna 1 [Festa]: 'Refrigerante' não declara 'specializes Bebida', mas o genset 'TiposDeBebida' o agrupa sob 'Bebida'.
+    sugestão: declare explicitamente 'subkind Refrigerante specializes Bebida' (dedução pela sobrecarga do genset).
+
+Nenhum erro semântico encontrado.
+```
+
+# <a name="padroes-de-projeto"></a> Padrões de projeto de ontologias (ODPs)
+
+A análise de padrões é dividida em um matcher por ODP. Cada um reconhece as
+variantes do padrão, aplica as coerções cabíveis e produz as deduções de
+padrões incompletos:
+
+| ODP | O que valida | Coerção aplicada | Dedução |
+|---|---|---|---|
+| Subkind | subkind especializando sortal rígido; genset `disjoint` de subkinds | `kind → subkind` | específico do genset sem `specializes` |
+| Role | role com general válido, dependência relacional e genset dos irmãos | `@material → @mediation` | dependência herdada de supertipo mediado |
+| Phase | phases com general sortal e genset `disjoint` (completo opcional, mínimo 2 fases) | `subkind → phase` | partição de fases incompleta |
+| Relator | relator mediando ao menos 2 universais substanciais | `kind → relator`, `@material → @mediation` | mediação faltante derivada de uma `@material` |
+| Mode | mode com `@characterization`/`@inherence` para um endurante | `kind → mode` | mode sem relação de inerência |
+| RoleMixin | roleMixin com roles e genset `disjoint`, identidade herdada de kind/collective | `category/mixin → roleMixin` | role sem `specializes` do roleMixin |
 
 # <a name="conceitos-reconhecidos"></a> Conceitos da linguagem reconhecidos
 
