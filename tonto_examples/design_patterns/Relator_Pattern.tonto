@@ -1,0 +1,15 @@
+package Relator_Pattern
+
+kind ClassNameA
+kind ClassNameB
+
+role Role_NameA specializes ClassNameA
+role Role_NameB specializes ClassNameB
+
+relator Relator_Name {
+    @mediation [1..*] -- [1..*] Role_NameA
+    @mediation [1..*] -- [1..*] Role_NameB
+}
+
+@material relation Role_NameA [1..*] -- relationName -- [1..*] Role_NameB
+//"relationName" can be replaced by a specific name for the relation

@@ -1,8 +1,8 @@
 """Reconhecimento do padrão RoleMixin.
 
-O RoleMixin agrupa roles de kinds diferentes e depende de um relator. Aqui o
-matcher confere os roles, o genset opcional e a dependência relacional, e
-também converte category/mixin em roleMixin quando só há roles.
+O RoleMixin agrupa roles de kinds diferentes. Aqui o matcher confere os roles,
+o genset opcional e a dependência relacional, e também converte
+category/mixin em roleMixin quando só há roles.
 """
 
 from ..core.hierarchy import children, has_identity_provider, rigid_children
@@ -30,8 +30,8 @@ def analyze_role_mixin_patterns(index: OntologyIndex) -> RoleMixinReport:
   """
   Analisa os roleMixins do índice e monta o relatório do padrão RoleMixin
 
-  Aplica a coerção category/mixin -> roleMixin, valida a partição de roles,
-  checa a identidade dos roles e a dependência relacional do roleMixin
+  Aplica a coerção category/mixin -> roleMixin, valida a partição de roles e
+  checa a identidade dos roles.
   """
 
   coercions: list[PatternDiagnostic] = []
@@ -79,12 +79,7 @@ def analyze_role_mixin_patterns(index: OntologyIndex) -> RoleMixinReport:
 
     relevant, ancestor = _find_dependence(info, index, mediations)
 
-    # roleMixin sem relator/mediação está incompleto
-    if not relevant:
-      deductions.append(_no_dependence(info))
-      continue
-
-    if ancestor != info.node.name:
+    if relevant and ancestor != info.node.name:
       deductions.append(_inherited_dependence(info, ancestor))
 
     for role in pending:
@@ -109,7 +104,7 @@ def analyze_role_mixin_patterns(index: OntologyIndex) -> RoleMixinReport:
         relators=relators,
         genset=ref_of(genset) if genset is not None else None,
         lines=tuple(sorted(lines)),
-        deduced=bool(pending) or ancestor != info.node.name,
+        deduced=bool(pending) or (ancestor is not None and ancestor != info.node.name),
       )
     )
 
@@ -407,25 +402,6 @@ def _no_roles(info: ClassInfo) -> PatternDiagnostic:
     (
       f"declare roles especializando '{info.node.name}' ou faça '{info.node.name}' "
       "especializar outro roleMixin (dedução do padrão RoleMixin incompleto)."
-    ),
-  )
-
-
-def _no_dependence(info: ClassInfo) -> PatternDiagnostic:
-  """Gera a dedução de roleMixin sem relator/mediação"""
-
-  return diagnostic(
-    PATTERN,
-    "deduction",
-    (
-      f"roleMixin '{info.node.name}' não participa de uma dependência relacional "
-      "(nenhum relator/mediação)."
-    ),
-    info,
-    (
-      f"adicione um relator com '@mediation' para '{info.node.name}' ou faça "
-      f"'{info.node.name}' herdar a dependência de outro roleMixin (dedução do "
-      "padrão RoleMixin incompleto)."
     ),
   )
 

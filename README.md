@@ -68,16 +68,21 @@ tonto-compilador/
 │   ├── imports.py                 (resolve quais imports casam com quais arquivos vizinhos)
 │   └── reporter.py                (erros semânticos)
 │
-└── tonto_examples/                (10 arquivos .tonto usados como teste, pasta plana)
-    ├── Pizzaria.tonto                      (pacote principal, importa os demais)
-    ├── Pizzaria_Pessoa.tonto, Pizzaria_Cliente.tonto,
-    │   Pizzaria_Empresa.tonto, Pizzaria_Endereco.tonto,
-    │   Pizzaria_Pizza.tonto, Pizzaria_CoberturasDePizza.tonto,
-    │   Pizzaria_ItensDaPizzaria.tonto      (cenário "Pizzaria" dividido em pacotes
-    │                                        ligados por import, com ciclo entre
-    │                                        Pizza e CoberturasDePizza)
-    ├── Pizzaria_MONO.tonto                 (mesma ontologia em um único pacote, sem imports)
-    └── Pizzaria_Erros.tonto                (casos propositais de erro léxico/sintático/semântico)
+└── tonto_examples/                (exemplos .tonto agrupados por cenário)
+    ├── pizzaria/
+    │   ├── Pizzaria.tonto         (pacote principal, importa os demais)
+    │   ├── Pizzaria_Pessoa.tonto, Pizzaria_Cliente.tonto,
+    │   │   Pizzaria_Empresa.tonto, Pizzaria_Endereco.tonto,
+    │   │   Pizzaria_Pizza.tonto, Pizzaria_CoberturasDePizza.tonto,
+    │   │   Pizzaria_ItensDaPizzaria.tonto  
+    │   │                                   
+    │   ├── Pizzaria_MONO.tonto             (mesma ontologia em um único pacote, sem imports)
+    │   └── Pizzaria_Erros.tonto            (casos propositais de erro léxico/sintático/semântico)
+    ├── hospital/                           (6 arquivos multi-pacote; entrada em UBS.tonto)
+    ├── car/                                (car.tonto e carRental.tonto, pacotes independentes)
+    ├── food_allergy/                       (alergiaalimentar.tonto)
+    ├── tdah/                               (TDAH.tonto)
+    └── design_patterns/                    (exemplos de ODPs)
 ```
 
 ### <a name="descricao-dos-componentes"></a> Descrição dos componentes
@@ -239,19 +244,20 @@ tonto-compilador/
 
 * `tonto_examples/` (Diretório)
 
-    * Arquivos de código-fonte em TONTO usados como casos de teste: um
-      cenário único de pizzaria, dividido em pacotes interligados por
-      `import` (`Pizzaria.tonto` importa `Pessoa`, `Cliente`, `Pizza`,
-      `Empresa` e `ItensDaPizzaria`; `Empresa` por sua vez importa
-      `Endereco`; `Pessoa` e `Cliente` se importam mutuamente, assim como
-      `Pizza` e `CoberturasDePizza`), a mesma ontologia reunida em um único
-      pacote sem imports (`Pizzaria_MONO.tonto`) e um arquivo dedicado a
-      casos de erro léxico/sintático/semântico propositais
-      (`Pizzaria_Erros.tonto`). Os imports entre pacotes são resolvidos
-      casando o nome em `import <Nome>` com o cabeçalho `package <Nome>` de
-      um arquivo **vizinho na mesma pasta** — não há estrutura de
-      subpastas — e a busca em largura de `parser.py` evita loop infinito
-      mesmo em ciclos como `Pizza` ⇄ `CoberturasDePizza`.
+    * Arquivos de código-fonte em TONTO usados como casos de teste,
+      agrupados por cenário em subpastas (`pizzaria/`, `hospital/`,
+      `car/`, `food_allergy/`, `tdah/`, `design_patterns/`). O menu do
+      `main.py` percorre a pasta recursivamente e mostra o caminho relativo
+      de cada arquivo.
+
+    * Os imports entre pacotes são resolvidos casando o nome em
+      `import <Nome>` com o cabeçalho `package <Nome>` de um arquivo
+      **vizinho no mesmo diretório do arquivo analisado**. Por isso cada
+      cenário mantém seus arquivos lado a lado na própria subpasta; a busca
+      em largura de `parser.py` evita loop infinito mesmo em ciclos como
+      `Pizza` ⇄ `CoberturasDePizza`. Passar um caminho arbitrário no
+      terminal funciona, mas os imports só são encontrados no diretório
+      daquele arquivo.
 
 * `requirements.txt`, `pyproject.toml`, `ruff.toml`, `.editorconfig`
 
@@ -261,7 +267,7 @@ tonto-compilador/
 ### <a name="como-as-pecas-se-conectam"></a> Como as peças se conectam
 
 ```
-                               tonto_examples/*.tonto
+                            tonto_examples/<grupo>/*.tonto
                                         │
                                         ▼
                               main.py (orquestrador)
@@ -338,16 +344,16 @@ python3 main.py
 Analisando um arquivo específico, com as três fases:
 
 ```bash
-python3 main.py tonto_examples/Pizzaria.tonto
+python3 main.py tonto_examples/pizzaria/Pizzaria.tonto
 ```
 
 Rodando só uma das fases — a flag, quando usada, deve vir **antes** do
 caminho do arquivo:
 
 ```bash
-python3 main.py --lexic tonto_examples/Pizzaria.tonto     # só análise léxica
-python3 main.py --syntax tonto_examples/Pizzaria.tonto    # tabela de síntese + erros
-python3 main.py --semantic tonto_examples/Pizzaria.tonto  # relatório de padrões + erros semânticos
+python3 main.py --lexic tonto_examples/pizzaria/Pizzaria.tonto     # só análise léxica
+python3 main.py --syntax tonto_examples/pizzaria/Pizzaria.tonto    # tabela de síntese + erros
+python3 main.py --semantic tonto_examples/pizzaria/Pizzaria.tonto  # relatório de padrões + erros semânticos
 python3 main.py --lexic                                   # só léxica, com menu de exemplos
 python3 main.py --syntax                                  # só sintática, com menu de exemplos
 python3 main.py --semantic                                # só semântica, com menu de exemplos
@@ -362,10 +368,15 @@ Sem argumento de arquivo, o programa lista os `.tonto` da pasta
 ```
 --- Exemplos TONTO disponíveis ---
 
-[00]  Pizzaria.tonto
-[01]  Pizzaria_Cliente.tonto
-[02]  Pizzaria_CoberturasDePizza.tonto
+[00]  car/car.tonto
+[01]  car/carRental.tonto
+[02]  design_patterns/Mode_Pattern.tonto
 ...
+[19]  hospital/UBS.tonto
+...
+[21]  pizzaria/Pizzaria.tonto
+...
+[31]  tdah/TDAH.tonto
 
 Escolha o número do arquivo a analisar:
 ```
@@ -416,7 +427,7 @@ Tokens e contagem exportados para: lexico_analyzer/exports/Pizzaria_Empresa.json
 reconhecido, é impressa a **tabela de síntese**: contagens gerais e uma
 sub-tabela por tipo de declaração (própria ou trazida por import resolvido,
 identificada pela coluna "Pacote de origem"). O exemplo abaixo é a saída real
-de `python3 main.py --syntax tonto_examples/Pizzaria_Empresa.tonto` —
+de `python3 main.py --syntax tonto_examples/pizzaria/Pizzaria_Empresa.tonto` —
 `Pizzaria_Empresa.tonto` importa `Pizzaria_Endereco.tonto` (que declara os
 datatypes `Endereco` e `Contato`, usados como tipo dos atributos `endereco` e
 `contato` em `Empresa`):

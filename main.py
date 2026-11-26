@@ -6,10 +6,10 @@ resultado aos módulos de apresentação.
 
 Uso:
     python3 main.py
-    python3 main.py tonto_examples/Pizzaria.tonto
-    python3 main.py --lexic tonto_examples/Pizzaria.tonto
-    python3 main.py --syntax tonto_examples/Pizzaria.tonto
-    python3 main.py --semantic tonto_examples/Pizzaria.tonto
+    python3 main.py tonto_examples/pizzaria/Pizzaria.tonto
+    python3 main.py --lexic tonto_examples/pizzaria/Pizzaria.tonto
+    python3 main.py --syntax tonto_examples/pizzaria/Pizzaria.tonto
+    python3 main.py --semantic tonto_examples/pizzaria/Pizzaria.tonto
     python3 main.py --lexic
     python3 main.py --syntax
     python3 main.py --semantic
@@ -41,12 +41,16 @@ MODOS_PADRAO = set(MODOS.values())
 
 
 def listar_e_mapear_exemplos(pasta: Path) -> dict[str, Path] | None:
-  """Imprime um menu numerado com os `.tonto` da pasta e devolve o mapa."""
+  """Imprime um menu numerado com os `.tonto` da pasta e devolve o mapa.
+
+  A busca é recursiva, assim os exemplos podem ficar agrupados em subpastas por
+  cenário (ex.: `pizzaria/Pizzaria.tonto`).
+  """
   if not pasta.is_dir():
     print(f"ERRO: a pasta '{pasta}' não foi encontrada.")
     return None
 
-  exemplos = sorted(item for item in pasta.iterdir() if item.suffix == ".tonto")
+  exemplos = sorted(pasta.rglob("*.tonto"))
 
   if not exemplos:
     print(f"Nenhum arquivo .tonto encontrado em '{pasta}'.")
@@ -59,7 +63,7 @@ def listar_e_mapear_exemplos(pasta: Path) -> dict[str, Path] | None:
   for i, arquivo in enumerate(exemplos):
     chave = f"{i:02}"
     mapa[chave] = arquivo
-    print(f"[{chave}]  {arquivo.name}")
+    print(f"[{chave}]  {arquivo.relative_to(pasta)}")
 
   return mapa
 

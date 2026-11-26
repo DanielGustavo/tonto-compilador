@@ -27,8 +27,7 @@ def analyze_role_patterns(index: OntologyIndex) -> RoleReport:
   """
   Analisa todas as classes `role` e monta o relatório do padrão Role
 
-  Coleta as mediações, valida o general, a dependência relacional e o genset
-  de cada role
+  Coleta as mediações, valida o general e o genset de cada role
   """
 
   coercions: list[PatternDiagnostic] = []
@@ -70,32 +69,14 @@ def analyze_role_patterns(index: OntologyIndex) -> RoleReport:
     # supertipo, ou vazio quando não tem dependência relacional
     if direct:
       relevant = direct
-      dependency_ok = True
       deduced = False
     elif inherited:
       relevant = inherited
-      dependency_ok = True
       deduced = True
       deductions.append(_inherited_dependency(info, inherited))
     else:
       relevant = []
-      dependency_ok = False
       deduced = False
-      deductions.append(
-        diagnostic(
-          PATTERN,
-          "deduction",
-          (
-            f"role '{info.node.name}' não possui relator/mediação que sustente a "
-            "dependência relacional."
-          ),
-          info,
-          (
-            f"adicione um relator com '@mediation' para '{info.node.name}' "
-            "(dedução do padrão Role incompleto)."
-          ),
-        )
-      )
 
     structural_ok, genset = _check_genset(index, info, valid_generals)
 
@@ -117,7 +98,7 @@ def analyze_role_patterns(index: OntologyIndex) -> RoleReport:
         )
       )
 
-    if not (dependency_ok and structural_ok):
+    if not structural_ok:
       continue
 
     relators = unique_refs([relator for relator, _, _ in relevant])
@@ -217,7 +198,9 @@ def _general_error(
       "role ou roleMixin."
     )
   else:
-    message = f"role '{info.node.name}' não declara um general válido para o padrão Role."
+    message = (
+      f"role '{info.node.name}' não declara um general válido para o padrão Role."
+    )
 
   return diagnostic(
     PATTERN,
